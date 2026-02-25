@@ -4,7 +4,7 @@ import { filter, Subject, takeUntil } from 'rxjs';
 
 import { noopFn } from '@/shared/utils/merge-classes';
 
-import type { OnClickCallback, ZardAlertDialogComponent, ZardAlertDialogOptions } from './alert-dialog.component';
+import type { OnClickCallback, ZardAlertDialogComponent, ZardAlertDialogOptions } from './alert-dialog/alert-dialog.component';
 
 export class ZardAlertDialogRef<T = unknown> {
   private readonly destroy$ = new Subject<void>();

@@ -6,7 +6,7 @@ import {
   ZardTableHeadComponent,
   ZardTableCellComponent,
   ZardTableCaptionComponent,
-} from '@/shared/components/table/table.component';
+} from './table/table.component';
 
 export const ZardTableImports = [
   ZardTableComponent,

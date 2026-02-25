@@ -1,2 +1,2 @@
-export * from './checkbox.component';
+export * from './checkbox/checkbox.component';
 export * from './checkbox.variants';

@@ -1,0 +1,75 @@
+
+    <div class="brew-shell ui-shell-enter">
+      <header
+        class="brew-titlebar window-titlebar drag-region"
+        [class.brew-titlebar-unfocused]="!windowChromeState().isFocused"
+      >
+        <div class="brew-titlebar-left">
+          <span class="brew-native-inset brew-native-inset-empty"></span>
+        </div>
+
+        <div class="brew-titlebar-center">
+          <span class="brew-titlebar-app">Brew Sidebar</span>
+          <z-badge zType="secondary" zShape="pill" class="brew-titlebar-route">{{ activeRouteLabel() }}</z-badge>
+        </div>
+
+        <div class="brew-titlebar-right no-drag">
+          <button
+            type="button"
+            z-button
+            zType="ghost"
+            zSize="sm"
+            class="no-drag"
+            data-testid="titlebar-palette"
+            (click)="paletteOpen.set(true)"
+          >
+            Palette
+          </button>
+          <button type="button" z-button zType="ghost" zSize="sm" class="no-drag" (click)="syncMetadata()">
+            Sync
+          </button>
+          <button type="button" z-button zSize="sm" class="no-drag" (click)="checkNow()">Check</button>
+        </div>
+      </header>
+
+      <z-layout zDirection="horizontal" class="brew-layout">
+        <app-sidebar-nav [updateCount]="updatesStore.updateCount()" />
+
+        <z-content class="brew-content-area">
+          <app-top-status-bar
+            [updateCount]="updatesStore.updateCount()"
+            [lastCheckedAt]="updatesStore.lastCheckedAt()"
+            [brewAvailable]="appStatusStore.availability()?.available ?? false"
+            [brewVersion]="appStatusStore.availability()?.version ?? null"
+          />
+
+          <div class="brew-main-pane">
+            @if (appStatusStore.availability() && !(appStatusStore.availability()?.available ?? false)) {
+              <div class="h-full overflow-y-auto">
+                <app-brew-missing-view />
+              </div>
+            } @else {
+              <app-panel-container class="block h-full">
+                <router-outlet />
+              </app-panel-container>
+            }
+          </div>
+
+          <z-footer class="brew-footer" [zHeight]="42">
+            <app-keyboard-shortcuts-hint />
+          </z-footer>
+        </z-content>
+      </z-layout>
+    </div>
+
+    <app-command-palette
+      [open]="paletteOpen()"
+      [actions]="paletteActions"
+      (selected)="runPaletteAction($event)"
+      (closed)="paletteOpen.set(false)"
+    />
+
+    <app-package-details-drawer />
+    <app-command-progress-drawer />
+    <app-toast-host />
+  

@@ -1,0 +1,98 @@
+
+    <section class="ui-shell-enter space-y-2">
+      <header class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-lg font-semibold">Browse Homebrew Catalog</h2>
+        <button
+          type="button"
+          z-button
+          zType="outline"
+          zSize="sm"
+          (click)="catalogStore.refresh(true)"
+        >
+          Refresh Catalog
+        </button>
+      </header>
+
+      <app-package-search-input
+        [value]="catalogStore.query()"
+        placeholder="Search formulae and casks"
+        (valueChange)="onQueryChange($event)"
+      />
+
+      <app-package-filter-chips
+        [selected]="catalogStore.kindFilter()"
+        [options]="filterOptions"
+        (selectedChange)="onKindChange($event)"
+      />
+
+      <div class="flex items-center justify-between text-xs text-muted-foreground mono">
+        <span>Total {{ catalogStore.total() }}</span>
+        <span>
+          Source {{ catalogStore.source() }}
+          @if (catalogStore.stale()) {
+            <strong class="text-destructive">(stale cache)</strong>
+          }
+        </span>
+      </div>
+
+      @if (catalogStore.loading()) {
+        <app-loading-state label="Loading catalog…" />
+      } @else if (catalogStore.error()) {
+        <app-empty-state label="Catalog unavailable" [description]="catalogStore.error() ?? ''" />
+      } @else if (catalogStore.items().length === 0) {
+        <app-empty-state label="No catalog results" description="Try a broader query." />
+      } @else {
+        <div class="stagger-list space-y-1.5">
+          @for (item of catalogStore.items(); track item.id) {
+            <app-package-row
+              [name]="item.name"
+              [kind]="item.kind"
+              [desc]="packageDescription(item)"
+              [currentVersion]="item.version"
+              [tap]="item.tap"
+              [actionLabel]="installActionLabel(item)"
+              [actionDisabled]="installActionDisabled(item) || installBusy()"
+              [actionVariant]="installActionVariant(item)"
+              [overflowActions]="overflowActionsFor(item)"
+              (action)="openInstallDialog(item)"
+              (overflowAction)="onOverflowAction(item, $event)"
+            />
+          }
+        </div>
+      }
+
+      <footer class="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          z-button
+          zType="outline"
+          zSize="sm"
+          [zDisabled]="!catalogStore.hasPreviousPage()"
+          (click)="catalogStore.previousPage()"
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          z-button
+          zType="outline"
+          zSize="sm"
+          [zDisabled]="!catalogStore.hasNextPage()"
+          (click)="catalogStore.nextPage()"
+        >
+          Next
+        </button>
+      </footer>
+    </section>
+
+    <app-upgrade-confirm-dialog
+      [open]="installConfirmOpen()"
+      [title]="installDialogTitle()"
+      [message]="installDialogMessage()"
+      [commandPreview]="installCommandPreview()"
+      [confirmLabel]="'Install package'"
+      [busy]="installBusy()"
+      (cancel)="closeInstallDialog()"
+      (confirm)="confirmInstall()"
+    />
+  

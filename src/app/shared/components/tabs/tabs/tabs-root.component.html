@@ -1,0 +1,92 @@
+@if (navBeforeContent()) {
+  <ng-container [ngTemplateOutlet]="navigationBlock" />
+}
+
+<div class="tab-content flex-1">
+  @for (tab of tabs(); track $index; let index = $index) {
+    <div
+      role="tabpanel"
+      [attr.id]="'tabpanel-' + index"
+      [attr.aria-labelledby]="'tab-' + index"
+      [attr.tabindex]="0"
+      [hidden]="activeTabIndex() !== index"
+      class="focus-visible:ring-primary/50 outline-none focus-visible:ring-2"
+    >
+      <ng-container [ngTemplateOutlet]="tab.contentTemplate()" />
+    </div>
+  }
+</div>
+
+@if (!navBeforeContent()) {
+  <ng-container [ngTemplateOutlet]="navigationBlock" />
+}
+
+<ng-template #navigationBlock>
+  @let horizontal = isHorizontal();
+
+  <div [class]="navGridClasses()">
+    @if (showArrow()) {
+      @if (horizontal) {
+        <button
+          type="button"
+          [class]="'scroll-btn scroll-left cursor-pointer pr-4 ' + (zTabsPosition() === 'top' ? 'mb-4' : 'mt-4')"
+          (click)="scrollNav('left')"
+        >
+          <z-icon zType="chevron-left" />
+        </button>
+      } @else {
+        <button
+          type="button"
+          [class]="'scroll-btn scroll-up cursor-pointer pb-4 ' + (zTabsPosition() === 'left' ? 'mr-4' : 'ml-4')"
+          (click)="scrollNav('up')"
+        >
+          <z-icon zType="chevron-up" />
+        </button>
+      }
+    }
+
+    <nav
+      [class]="navClasses()"
+      #tabNav
+      role="tablist"
+      [attr.aria-orientation]="horizontal ? 'horizontal' : 'vertical'"
+    >
+      @for (tab of tabs(); track $index; let index = $index) {
+        <button
+          type="button"
+          z-button
+          zType="ghost"
+          role="tab"
+          [attr.id]="'tab-' + index"
+          [attr.aria-selected]="activeTabIndex() === index"
+          [attr.tabindex]="activeTabIndex() === index ? 0 : -1"
+          [attr.aria-controls]="'tabpanel-' + index"
+          (click)="setActiveTab(index)"
+          [class]="buttonClassesSignal()[index]"
+        >
+          {{ tab.label() }}
+        </button>
+      }
+    </nav>
+
+    @if (showArrow()) {
+      @if (horizontal) {
+        <button
+          type="button"
+          [class]="'scroll-btn scroll-right cursor-pointer pl-4 ' + (zTabsPosition() === 'top' ? 'mb-4' : 'mt-4')"
+          (click)="scrollNav('right')"
+        >
+          <z-icon zType="chevron-right" />
+        </button>
+      } @else {
+        <button
+          type="button"
+          [class]="'scroll-btn scroll-down cursor-pointer pt-4 ' + (zTabsPosition() === 'left' ? 'mr-4' : 'ml-4')"
+          (click)="scrollNav('down')"
+        >
+          <z-icon zType="chevron-down" />
+        </button>
+      }
+    }
+  </div>
+</ng-template>

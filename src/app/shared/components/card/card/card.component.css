@@ -1,0 +1,5 @@
+
+    [data-slot='card-footer']:empty {
+      display: none;
+    }
+  

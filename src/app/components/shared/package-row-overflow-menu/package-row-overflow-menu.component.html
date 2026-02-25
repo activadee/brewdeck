@@ -1,0 +1,24 @@
+
+    <z-dropdown-menu class="shrink-0">
+      <button
+        type="button"
+        dropdown-trigger
+        z-button
+        zType="ghost"
+        zSize="icon-sm"
+        [attr.aria-label]="ariaLabel()"
+      >
+        <z-icon zType="ellipsis" zSize="sm" />
+      </button>
+
+      @for (action of actions(); track action.id) {
+        <z-dropdown-menu-item
+          [disabled]="action.disabled ?? false"
+          [variant]="action.destructive ? 'destructive' : 'default'"
+          (click)="onSelect(action)"
+        >
+          {{ action.label }}
+        </z-dropdown-menu-item>
+      }
+    </z-dropdown-menu>
+  

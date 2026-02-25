@@ -1,7 +1,7 @@
-import { ZardTreeNodeContentComponent } from '@/shared/components/tree/tree-node-content.component';
+import { ZardTreeNodeContentComponent } from './tree-node-content/tree-node-content.component';
 import { ZardTreeNodeToggleDirective } from '@/shared/components/tree/tree-node-toggle.directive';
-import { ZardTreeNodeComponent } from '@/shared/components/tree/tree-node.component';
-import { ZardTreeComponent } from '@/shared/components/tree/tree.component';
+import { ZardTreeNodeComponent } from './tree-node/tree-node.component';
+import { ZardTreeComponent } from './tree/tree.component';
 
 export const ZardTreeImports = [
   ZardTreeComponent,

@@ -1,0 +1,39 @@
+
+    @if (zVirtualScroll()) {
+      <cdk-virtual-scroll-viewport [itemSize]="zVirtualItemSize()" class="h-full w-full">
+        <z-tree-node
+          *cdkVirtualFor="let flatNode of flattenedNodes(); trackBy: trackByKey"
+          [node]="flatNode.node"
+          [level]="flatNode.level"
+          [flat]="true"
+          [selectable]="zSelectable()"
+          [checkable]="zCheckable()"
+          [nodeTemplate]="customNodeTemplate() ?? null"
+          role="treeitem"
+          [attr.aria-expanded]="flatNode.expandable ? treeService.isExpanded(flatNode.node.key) : null"
+          [attr.aria-level]="flatNode.level + 1"
+          [attr.aria-selected]="zSelectable() ? treeService.isSelected(flatNode.node.key) : null"
+          [attr.aria-disabled]="flatNode.node.disabled || null"
+          [attr.data-key]="flatNode.node.key"
+        />
+      </cdk-virtual-scroll-viewport>
+    } @else {
+      @for (node of zData(); track node.key; let i = $index) {
+        <z-tree-node
+          [node]="node"
+          [level]="0"
+          [selectable]="zSelectable()"
+          [checkable]="zCheckable()"
+          [nodeTemplate]="customNodeTemplate() ?? null"
+          role="treeitem"
+          [attr.aria-expanded]="node.children?.length ? treeService.isExpanded(node.key) : null"
+          [attr.aria-level]="1"
+          [attr.aria-setsize]="zData().length"
+          [attr.aria-posinset]="i + 1"
+          [attr.aria-selected]="zSelectable() ? treeService.isSelected(node.key) : null"
+          [attr.aria-disabled]="node.disabled || null"
+          [attr.data-key]="node.key"
+        />
+      }
+    }
+  

@@ -2,7 +2,7 @@ import {
   ZardBreadcrumbComponent,
   ZardBreadcrumbEllipsisComponent,
   ZardBreadcrumbItemComponent,
-} from '@/shared/components/breadcrumb/breadcrumb.component';
+} from './breadcrumb/breadcrumb.component';
 
 export const ZardBreadcrumbImports = [
   ZardBreadcrumbComponent,

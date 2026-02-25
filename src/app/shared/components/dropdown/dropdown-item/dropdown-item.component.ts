@@ -1,0 +1,71 @@
+import {
+  booleanAttribute,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  ViewEncapsulation,
+} from '@angular/core';
+
+import type { ClassValue } from 'clsx';
+
+import { mergeClasses } from '@/shared/utils/merge-classes';
+
+import { ZardDropdownMenuComponent } from '../dropdown/dropdown.component';
+import { ZardDropdownService } from '../dropdown.service';
+import { dropdownItemVariants, type ZardDropdownItemVariants } from '../dropdown.variants';
+
+@Component({
+  selector: 'z-dropdown-menu-item, [z-dropdown-menu-item]',
+  templateUrl: './dropdown-item.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  encapsulation: ViewEncapsulation.None,
+  host: {
+    '[class]': 'classes()',
+    '[attr.data-disabled]': 'disabled() || null',
+    '[attr.data-variant]': 'variant()',
+    '[attr.data-inset]': 'inset() || null',
+    '[attr.aria-disabled]': 'disabled()',
+    '(click.prevent-with-stop)': 'onClick()',
+    role: 'menuitem',
+    tabindex: '-1',
+  },
+  exportAs: 'zDropdownMenuItem',
+  styleUrl: './dropdown-item.component.css',
+})
+export class ZardDropdownMenuItemComponent {
+  private readonly dropdownService = inject(ZardDropdownService);
+  private readonly dropdownMenu = inject(ZardDropdownMenuComponent, { optional: true });
+
+  readonly variant = input<ZardDropdownItemVariants['variant']>('default');
+  readonly inset = input(false, { transform: booleanAttribute });
+  readonly disabled = input(false, { transform: booleanAttribute });
+  readonly class = input<ClassValue>('');
+
+  onClick() {
+    if (this.disabled()) {
+      return;
+    }
+
+    // Close the active dropdown implementation after the item action runs.
+    setTimeout(() => {
+      if (this.dropdownMenu) {
+        this.dropdownMenu.close();
+        return;
+      }
+
+      this.dropdownService.close();
+    }, 0);
+  }
+
+  protected readonly classes = computed(() =>
+    mergeClasses(
+      dropdownItemVariants({
+        variant: this.variant(),
+        inset: this.inset(),
+      }),
+      this.class(),
+    ),
+  );
+}

@@ -1,0 +1,37 @@
+
+    <button
+      z-button
+      type="button"
+      [zType]="zType()"
+      [zSize]="zSize()"
+      [disabled]="disabled()"
+      [class]="buttonClasses()"
+      zPopover
+      #popoverDirective="zPopover"
+      [zContent]="calendarTemplate"
+      zTrigger="click"
+      (zVisibleChange)="onPopoverVisibilityChange($event)"
+      [attr.aria-expanded]="false"
+      [attr.aria-haspopup]="true"
+      aria-label="Choose date"
+    >
+      <z-icon zType="calendar" />
+      <span [class]="textClasses()">
+        {{ displayText() }}
+      </span>
+    </button>
+
+    <ng-template #calendarTemplate>
+      <z-popover [class]="popoverClasses()">
+        <z-calendar
+          #calendar
+          class="border-0"
+          [value]="value()"
+          [minDate]="minDate()"
+          [maxDate]="maxDate()"
+          [disabled]="disabled()"
+          (dateChange)="onDateChange($event)"
+        />
+      </z-popover>
+    </ng-template>
+  

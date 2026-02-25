@@ -1,0 +1,13 @@
+
+    <label class="relative block">
+      <z-icon zType="search" class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground" />
+      <input
+        z-input
+        type="search"
+        [value]="value()"
+        [placeholder]="placeholder()"
+        (input)="onInput($event)"
+        class="h-9 pl-9"
+      />
+    </label>
+  

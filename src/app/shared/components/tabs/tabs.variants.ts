@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 
-import type { zAlign } from './tabs.component';
+import type { zAlign } from './tabs/tabs.component';
 
 export const tabContainerVariants = cva('flex', {
   variants: {

@@ -1,0 +1,12 @@
+
+    <z-card class="mx-0 mt-0 border-border/60 bg-card/90 shadow-sm">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <app-connection-status-pill [available]="brewAvailable()" [version]="brewVersion()" />
+          <p class="mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{{ checkedLabel() }}</p>
+        </div>
+
+        <z-badge zType="outline" zShape="pill" class="font-medium">Updates {{ updateCount() }}</z-badge>
+      </div>
+    </z-card>
+  

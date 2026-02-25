@@ -1,0 +1,42 @@
+@if (zContent()) {
+  <ng-container *ngTemplateOutlet="zContent()" />
+} @else {
+  <ul z-pagination-content>
+    <li z-pagination-item>
+      @let pagePrevious = Math.max(1, zPageIndex() - 1);
+      <z-pagination-previous
+        [zSize]="zSize()"
+        [zDisabled]="zDisabled() || zPageIndex() === 1"
+        (click)="goToPage(pagePrevious)"
+      />
+    </li>
+
+    @for (page of pages(); track page) {
+      <li z-pagination-item>
+        <button
+          z-pagination-button
+          type="button"
+          class="focus-visible:rounded-md"
+          [attr.aria-current]="page === zPageIndex() ? 'page' : null"
+          [attr.aria-disabled]="zDisabled() || null"
+          [zActive]="page === zPageIndex()"
+          [zDisabled]="zDisabled()"
+          [zSize]="zSize()"
+          (click)="goToPage(page)"
+        >
+          <span class="sr-only">{{ pages().length === page ? 'To last page, page' : 'To page' }}</span>
+          {{ page }}
+        </button>
+      </li>
+    }
+
+    <li z-pagination-item>
+      @let pageNext = Math.min(zPageIndex() + 1, zTotal());
+      <z-pagination-next
+        [zSize]="zSize()"
+        [zDisabled]="zDisabled() || zPageIndex() === zTotal()"
+        (click)="goToPage(pageNext)"
+      />
+    </li>
+  </ul>
+}

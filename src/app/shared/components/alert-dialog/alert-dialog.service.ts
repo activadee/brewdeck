@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 
 import { ZardAlertDialogRef } from './alert-dialog-ref';
-import { ZardAlertDialogComponent, ZardAlertDialogOptions } from './alert-dialog.component';
+import { ZardAlertDialogComponent, ZardAlertDialogOptions } from './alert-dialog/alert-dialog.component';
 
 type ContentType<T> = ComponentType<T> | TemplateRef<T> | string | undefined;
 

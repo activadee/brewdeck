@@ -1,0 +1,19 @@
+
+    <!-- Dropdown Trigger -->
+    <div class="trigger-container" (click)="toggle()" (keydown.{enter,space}.prevent)="toggle()" tabindex="0">
+      <ng-content select="[dropdown-trigger]" />
+    </div>
+
+    <!-- Template for overlay content -->
+    <ng-template #dropdownTemplate>
+      <div
+        [class]="contentClasses()"
+        role="menu"
+        [attr.data-state]="'open'"
+        (keydown.{arrowdown,arrowup,enter,space,escape,home,end}.prevent)="onDropdownKeydown($event)"
+        tabindex="-1"
+      >
+        <ng-content />
+      </div>
+    </ng-template>
+  

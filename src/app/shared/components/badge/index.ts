@@ -1,2 +1,2 @@
-export * from './badge.component';
+export * from './badge/badge.component';
 export * from './badge.variants';

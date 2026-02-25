@@ -1,0 +1,90 @@
+
+    <section class="ui-shell-enter space-y-2">
+      <header class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-lg font-semibold">Installed Packages</h2>
+        <button
+          type="button"
+          z-button
+          zType="outline"
+          zSize="sm"
+          (click)="installedStore.refresh()"
+        >
+          Refresh
+        </button>
+      </header>
+
+      <app-package-search-input
+        [value]="installedStore.query()"
+        (valueChange)="installedStore.setQuery($event)"
+      />
+
+      <app-package-filter-chips
+        [selected]="installedStore.kindFilter()"
+        [options]="filterOptions"
+        (selectedChange)="onFilterChange($event)"
+      />
+
+      <app-package-filter-chips
+        [selected]="installedStore.pinFilter()"
+        [options]="pinFilterOptions()"
+        (selectedChange)="onPinFilterChange($event)"
+      />
+
+      @if (installedStore.loading()) {
+        <app-loading-state label="Loading installed formulae and casks…" />
+      } @else if (installedStore.error()) {
+        <app-empty-state label="Load failed" [description]="installedStore.error() ?? ''" />
+      } @else if (installedStore.filteredItems().length === 0) {
+        <app-empty-state
+          label="No installed packages"
+          description="No packages match the current search and filter."
+        />
+      } @else {
+        <div class="stagger-list space-y-1.5">
+          @for (item of installedStore.filteredItems(); track item.id) {
+            <app-package-row
+              [name]="item.name"
+              [kind]="item.kind"
+              [desc]="item.desc"
+              [pinned]="item.pinned"
+              [installedVersion]="item.installedVersion"
+              [currentVersion]="item.currentVersion"
+              [tap]="item.tap"
+              [actionLabel]="'Uninstall'"
+              [actionDisabled]="actionBusy()"
+              [actionVariant]="'secondary'"
+              [overflowActions]="overflowActionsFor(item)"
+              (action)="openUninstallDialog(item)"
+              (overflowAction)="onOverflowAction(item, $event)"
+            />
+          }
+        </div>
+      }
+    </section>
+
+    <app-uninstall-confirm-dialog
+      [open]="uninstallConfirmOpen()"
+      [title]="uninstallDialogTitle()"
+      [message]="uninstallDialogMessage()"
+      [commandPreview]="uninstallCommandPreview()"
+      [kind]="selectedPackage()?.kind ?? null"
+      [zapSelected]="zapSelected()"
+      [busy]="uninstallBusy()"
+      (cancel)="closeUninstallDialog()"
+      (confirm)="confirmUninstall()"
+      (zapSelectedChange)="onZapSelectedChange($event)"
+    />
+
+    <app-reinstall-confirm-dialog
+      [open]="reinstallConfirmOpen()"
+      [title]="reinstallDialogTitle()"
+      [message]="reinstallDialogMessage()"
+      [commandPreview]="reinstallCommandPreview()"
+      [kind]="reinstallTarget()?.kind ?? null"
+      [zapSelected]="reinstallZapSelected()"
+      [busy]="reinstallBusy()"
+      (cancel)="closeReinstallDialog()"
+      (confirm)="confirmReinstall()"
+      (zapSelectedChange)="onReinstallZapSelectedChange($event)"
+    />
+  

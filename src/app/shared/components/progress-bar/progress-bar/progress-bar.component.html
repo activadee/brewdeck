@@ -1,0 +1,11 @@
+
+    @if (zIndeterminate()) {
+      <div [class]="classes()">
+        <div [class]="barClasses()"></div>
+      </div>
+    } @else {
+      <div [class]="classes()">
+        <div [style.width.%]="correctedProgress()" [class]="barClasses()" id="bar"></div>
+      </div>
+    }
+  

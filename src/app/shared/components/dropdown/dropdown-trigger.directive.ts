@@ -1,6 +1,6 @@
 import { Directive, ElementRef, inject, input, type OnInit, ViewContainerRef } from '@angular/core';
 
-import type { ZardDropdownMenuContentComponent } from './dropdown-menu-content.component';
+import type { ZardDropdownMenuContentComponent } from './dropdown-menu-content/dropdown-menu-content.component';
 import { ZardDropdownService } from './dropdown.service';
 
 @Directive({
