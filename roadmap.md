@@ -23,9 +23,10 @@ Brew Sidebar becomes the safest and fastest desktop control plane for Homebrew: 
   - Dependency-impact warning remains deferred to a later phase.
 - Add reinstall package flow:
   - Quick fix action for broken installs.
-- Add pin/unpin actions:
-  - Pin package to prevent upgrades.
-  - Visual pin badges in Installed and Updates tabs.
+- [x] Add pin/unpin actions (completed February 25, 2026):
+  - Pin/unpin formulae from Installed and Updates rows.
+  - Visual pinned badges and pinned filtering in Installed and Updates.
+  - Pinned formulae stay visible in Updates and require unpin before upgrade.
 - Add package details drawer:
   - Version history, homepage, license, dependencies, caveats.
 - Add per-action progress log:

@@ -11,8 +11,10 @@ import {
   type BrewJobProgressEvent,
   type CheckNowResult,
   type InstallOneRequest,
+  type PinOneRequest,
   type SearchCatalogRequest,
   type SearchCatalogResponse,
+  type UnpinOneRequest,
   type UninstallOneRequest,
   type UpdatesChangedEvent,
   type UpgradeOneRequest,
@@ -65,6 +67,22 @@ const createFallbackBridge = (): BrewGuiBridge => ({
     };
   },
   async uninstallOne(_request: UninstallOneRequest): Promise<BrewJobCompleteEvent> {
+    return {
+      jobId: crypto.randomUUID(),
+      success: false,
+      output: 'Electron bridge unavailable',
+      timestamp: new Date().toISOString()
+    };
+  },
+  async pinOne(_request: PinOneRequest): Promise<BrewJobCompleteEvent> {
+    return {
+      jobId: crypto.randomUUID(),
+      success: false,
+      output: 'Electron bridge unavailable',
+      timestamp: new Date().toISOString()
+    };
+  },
+  async unpinOne(_request: UnpinOneRequest): Promise<BrewJobCompleteEvent> {
     return {
       jobId: crypto.randomUUID(),
       success: false,

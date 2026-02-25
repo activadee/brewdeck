@@ -2,6 +2,8 @@ import { BrowserWindow, ipcMain } from 'electron';
 
 import {
   installOneRequestSchema,
+  pinOneRequestSchema,
+  unpinOneRequestSchema,
   uninstallOneRequestSchema,
   appSettingsUpdateSchema,
   checkNowResultSchema,
@@ -91,6 +93,26 @@ export function registerIpcHandlers(options: RegisterIpcOptions): void {
     const parsed = uninstallOneRequestSchema.parse(payload);
 
     return homebrew.uninstallOne(parsed, {
+      onProgress: emitJobProgress,
+      onComplete: emitJobComplete,
+      onFailed: emitJobFailed
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS.PIN_ONE, async (_event, payload) => {
+    const parsed = pinOneRequestSchema.parse(payload);
+
+    return homebrew.pinOne(parsed, {
+      onProgress: emitJobProgress,
+      onComplete: emitJobComplete,
+      onFailed: emitJobFailed
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS.UNPIN_ONE, async (_event, payload) => {
+    const parsed = unpinOneRequestSchema.parse(payload);
+
+    return homebrew.unpinOne(parsed, {
       onProgress: emitJobProgress,
       onComplete: emitJobComplete,
       onFailed: emitJobFailed

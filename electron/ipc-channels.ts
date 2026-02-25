@@ -8,6 +8,8 @@ export const IPC_CHANNELS = {
   SEARCH_CATALOG: 'brew:searchCatalog',
   INSTALL_ONE: 'brew:installOne',
   UNINSTALL_ONE: 'brew:uninstallOne',
+  PIN_ONE: 'brew:pinOne',
+  UNPIN_ONE: 'brew:unpinOne',
   UPGRADE_ONE: 'brew:upgradeOne',
   UPGRADE_ALL: 'brew:upgradeAll',
   CHECK_NOW: 'brew:checkNow',

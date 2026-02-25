@@ -100,6 +100,20 @@ export const uninstallOneRequestSchema = z
   });
 export type UninstallOneRequest = z.infer<typeof uninstallOneRequestSchema>;
 
+const formulaRequestKindSchema = z.literal('formula');
+
+export const pinOneRequestSchema = z.object({
+  kind: formulaRequestKindSchema,
+  name: z.string().min(1)
+});
+export type PinOneRequest = z.infer<typeof pinOneRequestSchema>;
+
+export const unpinOneRequestSchema = z.object({
+  kind: formulaRequestKindSchema,
+  name: z.string().min(1)
+});
+export type UnpinOneRequest = z.infer<typeof unpinOneRequestSchema>;
+
 export const checkNowResultSchema = z.object({
   count: z.number().int().nonnegative(),
   checkedAt: z.string()
@@ -203,6 +217,8 @@ export interface BrewGuiBridge {
   searchCatalog(request: SearchCatalogRequest): Promise<SearchCatalogResponse>;
   installOne(request: InstallOneRequest): Promise<BrewJobCompleteEvent>;
   uninstallOne(request: UninstallOneRequest): Promise<BrewJobCompleteEvent>;
+  pinOne(request: PinOneRequest): Promise<BrewJobCompleteEvent>;
+  unpinOne(request: UnpinOneRequest): Promise<BrewJobCompleteEvent>;
   upgradeOne(request: UpgradeOneRequest): Promise<BrewJobCompleteEvent>;
   upgradeAll(): Promise<BrewJobCompleteEvent>;
   checkNow(): Promise<CheckNowResult>;

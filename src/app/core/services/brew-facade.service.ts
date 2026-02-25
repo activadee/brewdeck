@@ -11,9 +11,11 @@ import type {
   InstallOneRequest,
   InstalledPackage,
   OutdatedPackage,
+  PinOneRequest,
   SearchCatalogRequest,
   SearchCatalogResponse,
   SyncMetadataResult,
+  UnpinOneRequest,
   UninstallOneRequest,
   UpdatesChangedEvent,
   UpgradeOneRequest,
@@ -63,6 +65,14 @@ export class BrewFacadeService {
 
   uninstallOne(request: UninstallOneRequest): Promise<BrewJobCompleteEvent> {
     return this.bridge.api.uninstallOne(request);
+  }
+
+  pinOne(request: PinOneRequest): Promise<BrewJobCompleteEvent> {
+    return this.bridge.api.pinOne(request);
+  }
+
+  unpinOne(request: UnpinOneRequest): Promise<BrewJobCompleteEvent> {
+    return this.bridge.api.unpinOne(request);
   }
 
   upgradeOne(request: UpgradeOneRequest): Promise<BrewJobCompleteEvent> {

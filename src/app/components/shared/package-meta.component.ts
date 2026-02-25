@@ -9,6 +9,9 @@ import type { PackageKind } from '../../../shared/contracts';
   template: `
     <div class="mt-2 flex flex-wrap items-center gap-2">
       <z-badge zType="outline" zShape="pill" class="mono text-[10px] uppercase">{{ kind() }}</z-badge>
+      @if (pinned()) {
+        <z-badge zType="secondary" zShape="pill" class="mono text-[10px] uppercase">pinned</z-badge>
+      }
       @if (installedVersion()) {
         <z-badge zType="outline" zShape="pill" class="mono text-[10px]">installed {{ installedVersion() }}</z-badge>
       }
@@ -24,6 +27,7 @@ import type { PackageKind } from '../../../shared/contracts';
 })
 export class PackageMetaComponent {
   readonly kind = input<PackageKind>('formula');
+  readonly pinned = input(false);
   readonly installedVersion = input<string | null>(null);
   readonly currentVersion = input<string | null>(null);
   readonly tap = input<string | null>(null);

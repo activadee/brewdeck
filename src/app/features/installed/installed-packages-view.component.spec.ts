@@ -22,6 +22,13 @@ const formulaItem: InstalledPackage = {
   homepage: 'https://example.com/ripgrep'
 };
 
+const pinnedFormulaItem: InstalledPackage = {
+  ...formulaItem,
+  id: 'formula:openssl@3',
+  name: 'openssl@3',
+  pinned: true
+};
+
 const caskItem: InstalledPackage = {
   id: 'cask:visual-studio-code',
   kind: 'cask',
@@ -41,9 +48,17 @@ function createInstalledStore(items: InstalledPackage[]) {
     filteredItems: signal(items),
     query: signal(''),
     kindFilter: signal<'all' | 'formula' | 'cask'>('all'),
+    pinFilter: signal<'all' | 'pinned' | 'unpinned'>('all'),
+    pinning: signal(false),
+    totalCount: signal(items.length),
+    pinnedCount: signal(items.filter((item) => item.pinned).length),
+    unpinnedCount: signal(items.filter((item) => !item.pinned).length),
     setQuery: vi.fn(),
     setKindFilter: vi.fn(),
-    refresh: vi.fn(async () => undefined)
+    setPinFilter: vi.fn(),
+    refresh: vi.fn(async () => undefined),
+    pinOne: vi.fn(async () => true),
+    unpinOne: vi.fn(async () => true)
   };
 }
 
@@ -167,6 +182,44 @@ describe('InstalledPackagesViewComponent', () => {
     expect(updatesStore.refresh).not.toHaveBeenCalled();
     expect(catalogStore.refresh).not.toHaveBeenCalled();
     expect(toast.push).not.toHaveBeenCalled();
+  });
+
+  it('shows pin menu action for unpinned formula', async () => {
+    const { fixture } = await render([formulaItem]);
+    const component = fixture.componentInstance as any;
+
+    expect(component.overflowActionsFor(formulaItem)).toEqual([
+      { id: 'pin', label: 'Pin formula', disabled: false }
+    ]);
+  });
+
+  it('shows unpin menu action for pinned formula', async () => {
+    const { fixture } = await render([pinnedFormulaItem]);
+    const component = fixture.componentInstance as any;
+
+    expect(component.overflowActionsFor(pinnedFormulaItem)).toEqual([
+      { id: 'unpin', label: 'Unpin formula', disabled: false }
+    ]);
+  });
+
+  it('shows disabled pin-not-supported action for casks', async () => {
+    const { fixture } = await render([caskItem]);
+    const component = fixture.componentInstance as any;
+
+    expect(component.overflowActionsFor(caskItem)).toEqual([
+      { id: 'pin-not-supported', label: 'Pin not supported for casks', disabled: true }
+    ]);
+  });
+
+  it('pins formula and refreshes updates on overflow action', async () => {
+    const { fixture, installedStore, updatesStore, toast } = await render([formulaItem]);
+    const component = fixture.componentInstance as any;
+
+    await component.onOverflowAction(formulaItem, 'pin');
+
+    expect(installedStore.pinOne).toHaveBeenCalledWith({ kind: 'formula', name: 'ripgrep' });
+    expect(updatesStore.refresh).toHaveBeenCalled();
+    expect(toast.push).toHaveBeenCalledWith('Pinned ripgrep.', 'success');
   });
 });
 

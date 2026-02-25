@@ -4,6 +4,8 @@ import { patchState, signalStore, withComputed, withMethods, withState } from '@
 import type {
   OutdatedPackage,
   PackageKind,
+  PinOneRequest,
+  UnpinOneRequest,
   UpdatesChangedEvent,
   UpgradeOneRequest
 } from '../../../shared/contracts';
@@ -11,6 +13,7 @@ import { BrewFacadeService } from '../services/brew-facade.service';
 import { JobsStore } from './jobs.store';
 
 type KindFilter = 'all' | PackageKind;
+type PinFilter = 'all' | 'pinned' | 'unpinned';
 
 interface UpdatesState {
   items: OutdatedPackage[];
@@ -18,8 +21,10 @@ interface UpdatesState {
   error: string | null;
   query: string;
   kindFilter: KindFilter;
+  pinFilter: PinFilter;
   lastCheckedAt: string | null;
   upgrading: boolean;
+  pinning: boolean;
 }
 
 const initialState: UpdatesState = {
@@ -28,8 +33,10 @@ const initialState: UpdatesState = {
   error: null,
   query: '',
   kindFilter: 'all',
+  pinFilter: 'all',
   lastCheckedAt: null,
-  upgrading: false
+  upgrading: false,
+  pinning: false
 };
 
 export const UpdatesStore = signalStore(
@@ -37,12 +44,23 @@ export const UpdatesStore = signalStore(
   withState(initialState),
   withComputed((store) => ({
     updateCount: computed(() => store.items().length),
+    pinnedCount: computed(() => store.items().filter((item) => item.pinned).length),
+    unpinnedCount: computed(() => store.items().filter((item) => !item.pinned).length),
     filteredItems: computed(() => {
       const query = store.query().trim().toLocaleLowerCase();
       const kindFilter = store.kindFilter();
+      const pinFilter = store.pinFilter();
 
       return store.items().filter((item) => {
         if (kindFilter !== 'all' && item.kind !== kindFilter) {
+          return false;
+        }
+
+        if (pinFilter === 'pinned' && !item.pinned) {
+          return false;
+        }
+
+        if (pinFilter === 'unpinned' && item.pinned) {
           return false;
         }
 
@@ -64,6 +82,10 @@ export const UpdatesStore = signalStore(
 
       setKindFilter(kindFilter: KindFilter): void {
         patchState(store, { kindFilter });
+      },
+
+      setPinFilter(pinFilter: PinFilter): void {
+        patchState(store, { pinFilter });
       },
 
       setExternalUpdate(event: UpdatesChangedEvent): void {
@@ -147,6 +169,70 @@ export const UpdatesStore = signalStore(
           return false;
         } finally {
           patchState(store, { upgrading: false });
+        }
+      },
+
+      async pinOne(payload: PinOneRequest): Promise<boolean> {
+        patchState(store, { pinning: true, error: null });
+
+        try {
+          const result = await facade.pinOne(payload);
+          if (!result.success) {
+            jobsStore.markFailed({
+              jobId: result.jobId,
+              error: result.output || 'Pin command failed',
+              output: result.output,
+              timestamp: result.timestamp
+            });
+            patchState(store, { error: result.output || 'Pin command failed' });
+            return false;
+          }
+
+          await this.refresh();
+          return true;
+        } catch (error) {
+          jobsStore.markFailed({
+            jobId: crypto.randomUUID(),
+            error: (error as Error).message,
+            output: '',
+            timestamp: new Date().toISOString()
+          });
+          patchState(store, { error: (error as Error).message });
+          return false;
+        } finally {
+          patchState(store, { pinning: false });
+        }
+      },
+
+      async unpinOne(payload: UnpinOneRequest): Promise<boolean> {
+        patchState(store, { pinning: true, error: null });
+
+        try {
+          const result = await facade.unpinOne(payload);
+          if (!result.success) {
+            jobsStore.markFailed({
+              jobId: result.jobId,
+              error: result.output || 'Unpin command failed',
+              output: result.output,
+              timestamp: result.timestamp
+            });
+            patchState(store, { error: result.output || 'Unpin command failed' });
+            return false;
+          }
+
+          await this.refresh();
+          return true;
+        } catch (error) {
+          jobsStore.markFailed({
+            jobId: crypto.randomUUID(),
+            error: (error as Error).message,
+            output: '',
+            timestamp: new Date().toISOString()
+          });
+          patchState(store, { error: (error as Error).message });
+          return false;
+        } finally {
+          patchState(store, { pinning: false });
         }
       }
     })

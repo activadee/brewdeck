@@ -6,8 +6,18 @@ vi.mock('electron', () => ({
   }
 }));
 
-import { uninstallOneRequestSchema } from '../../src/shared/contracts';
-import { buildInstallCommand, buildUninstallCommand, HomebrewService } from './homebrew-service';
+import {
+  pinOneRequestSchema,
+  unpinOneRequestSchema,
+  uninstallOneRequestSchema
+} from '../../src/shared/contracts';
+import {
+  buildInstallCommand,
+  buildPinCommand,
+  buildUninstallCommand,
+  buildUnpinCommand,
+  HomebrewService
+} from './homebrew-service';
 
 describe('buildInstallCommand', () => {
   it('builds formula install command', () => {
@@ -54,12 +64,46 @@ describe('buildUninstallCommand', () => {
   });
 });
 
+describe('buildPinCommand', () => {
+  it('builds pin command', () => {
+    expect(buildPinCommand({ kind: 'formula', name: 'ripgrep' })).toEqual(['pin', 'ripgrep']);
+  });
+});
+
+describe('buildUnpinCommand', () => {
+  it('builds unpin command', () => {
+    expect(buildUnpinCommand({ kind: 'formula', name: 'ripgrep' })).toEqual(['unpin', 'ripgrep']);
+  });
+});
+
 describe('uninstallOneRequestSchema', () => {
   it('rejects zap for formula uninstall requests', () => {
     const parsed = uninstallOneRequestSchema.safeParse({
       kind: 'formula',
       name: 'ripgrep',
       zap: true
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+});
+
+describe('pinOneRequestSchema', () => {
+  it('rejects cask pin requests', () => {
+    const parsed = pinOneRequestSchema.safeParse({
+      kind: 'cask',
+      name: 'visual-studio-code'
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+});
+
+describe('unpinOneRequestSchema', () => {
+  it('rejects cask unpin requests', () => {
+    const parsed = unpinOneRequestSchema.safeParse({
+      kind: 'cask',
+      name: 'visual-studio-code'
     });
 
     expect(parsed.success).toBe(false);
@@ -113,5 +157,55 @@ describe('HomebrewService.uninstallOne', () => {
 
     expect(enqueue).toHaveBeenCalledTimes(1);
     expect(enqueue.mock.calls[0]?.[1]).toBe(20 * 60 * 1000);
+  });
+});
+
+describe('HomebrewService.pinOne', () => {
+  it('enqueues pin jobs with the pin timeout', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => ({ stdout: 'ok', stderr: '', exitCode: 0 }));
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    await service.pinOne(
+      { kind: 'formula', name: 'ripgrep' },
+      {
+        onProgress: () => undefined,
+        onComplete: () => undefined,
+        onFailed: () => undefined
+      }
+    );
+
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(enqueue.mock.calls[0]?.[1]).toBe(5 * 60 * 1000);
+  });
+});
+
+describe('HomebrewService.unpinOne', () => {
+  it('enqueues unpin jobs with the unpin timeout', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => ({ stdout: 'ok', stderr: '', exitCode: 0 }));
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    await service.unpinOne(
+      { kind: 'formula', name: 'ripgrep' },
+      {
+        onProgress: () => undefined,
+        onComplete: () => undefined,
+        onFailed: () => undefined
+      }
+    );
+
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(enqueue.mock.calls[0]?.[1]).toBe(5 * 60 * 1000);
   });
 });

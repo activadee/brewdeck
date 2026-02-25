@@ -5,6 +5,7 @@ import type { InstalledPackage } from '../../../shared/contracts';
 import { EmptyStateComponent } from '../../components/foundation/empty-state.component';
 import { LoadingStateComponent } from '../../components/foundation/loading-state.component';
 import { PackageFilterChipsComponent } from '../../components/shared/package-filter-chips.component';
+import type { PackageRowOverflowAction } from '../../components/shared/package-row-overflow-menu.component';
 import { PackageRowComponent } from '../../components/shared/package-row.component';
 import { PackageSearchInputComponent } from '../../components/shared/package-search-input.component';
 import { UninstallConfirmDialogComponent } from '../../components/ux/uninstall-confirm-dialog.component';
@@ -51,6 +52,12 @@ import { UpdatesStore } from '../../core/stores/updates.store';
         (selectedChange)="onFilterChange($event)"
       />
 
+      <app-package-filter-chips
+        [selected]="installedStore.pinFilter()"
+        [options]="pinFilterOptions()"
+        (selectedChange)="onPinFilterChange($event)"
+      />
+
       @if (installedStore.loading()) {
         <app-loading-state label="Loading installed formulae and casks…" />
       } @else if (installedStore.error()) {
@@ -67,13 +74,16 @@ import { UpdatesStore } from '../../core/stores/updates.store';
               [name]="item.name"
               [kind]="item.kind"
               [desc]="item.desc"
+              [pinned]="item.pinned"
               [installedVersion]="item.installedVersion"
               [currentVersion]="item.currentVersion"
               [tap]="item.tap"
               [actionLabel]="'Uninstall'"
-              [actionDisabled]="uninstallBusy()"
+              [actionDisabled]="actionBusy()"
               [actionVariant]="'secondary'"
+              [overflowActions]="overflowActionsFor(item)"
               (action)="openUninstallDialog(item)"
+              (overflowAction)="onOverflowAction(item, $event)"
             />
           }
         </div>
@@ -111,7 +121,15 @@ export class InstalledPackagesViewComponent {
   protected readonly selectedPackage = signal<InstalledPackage | null>(null);
   protected readonly zapSelected = signal(false);
   protected readonly uninstallBusy = signal(false);
+  protected readonly actionBusy = computed(
+    () => this.uninstallBusy() || this.installedStore.pinning()
+  );
   protected readonly uninstallConfirmOpen = computed(() => Boolean(this.selectedPackage()));
+  protected readonly pinFilterOptions = computed(() => [
+    { value: 'all', label: 'All', count: this.installedStore.totalCount() },
+    { value: 'pinned', label: 'Pinned', count: this.installedStore.pinnedCount() },
+    { value: 'unpinned', label: 'Unpinned', count: this.installedStore.unpinnedCount() }
+  ]);
   protected readonly uninstallDialogTitle = computed(() =>
     this.selectedPackage() ? `Uninstall ${this.selectedPackage()!.name}?` : 'Uninstall package?'
   );
@@ -139,6 +157,10 @@ export class InstalledPackagesViewComponent {
     this.installedStore.setKindFilter(value as 'all' | 'formula' | 'cask');
   }
 
+  protected onPinFilterChange(value: string): void {
+    this.installedStore.setPinFilter(value as 'all' | 'pinned' | 'unpinned');
+  }
+
   protected openUninstallDialog(item: InstalledPackage): void {
     if (this.uninstallBusy()) {
       return;
@@ -159,6 +181,46 @@ export class InstalledPackagesViewComponent {
 
   protected onZapSelectedChange(selected: boolean): void {
     this.zapSelected.set(selected);
+  }
+
+  protected overflowActionsFor(item: InstalledPackage): PackageRowOverflowAction[] {
+    const busy = this.actionBusy();
+    if (item.kind === 'cask') {
+      return [
+        {
+          id: 'pin-not-supported',
+          label: 'Pin not supported for casks',
+          disabled: true
+        }
+      ];
+    }
+
+    return item.pinned
+      ? [{ id: 'unpin', label: 'Unpin formula', disabled: busy }]
+      : [{ id: 'pin', label: 'Pin formula', disabled: busy }];
+  }
+
+  protected async onOverflowAction(item: InstalledPackage, action: string): Promise<void> {
+    if (this.actionBusy() || item.kind !== 'formula') {
+      return;
+    }
+
+    if (action === 'pin') {
+      const started = await this.installedStore.pinOne({ kind: 'formula', name: item.name });
+      if (started) {
+        await this.updatesStore.refresh();
+        this.toast.push(`Pinned ${item.name}.`, 'success');
+      }
+      return;
+    }
+
+    if (action === 'unpin') {
+      const started = await this.installedStore.unpinOne({ kind: 'formula', name: item.name });
+      if (started) {
+        await this.updatesStore.refresh();
+        this.toast.push(`Unpinned ${item.name}.`, 'success');
+      }
+    }
   }
 
   protected async confirmUninstall(): Promise<void> {

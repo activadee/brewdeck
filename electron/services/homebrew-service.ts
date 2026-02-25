@@ -10,9 +10,11 @@ import type {
   InstallOneRequest,
   InstalledPackage,
   OutdatedPackage,
+  PinOneRequest,
   SearchCatalogRequest,
   SearchCatalogResponse,
   SyncMetadataResult,
+  UnpinOneRequest,
   UninstallOneRequest,
   UpgradeOneRequest
 } from '../../src/shared/contracts';
@@ -58,6 +60,14 @@ export function buildUninstallCommand(request: UninstallOneRequest): string[] {
   return request.zap
     ? ['uninstall', '--cask', '--zap', request.name]
     : ['uninstall', '--cask', request.name];
+}
+
+export function buildPinCommand(request: PinOneRequest): string[] {
+  return ['pin', request.name];
+}
+
+export function buildUnpinCommand(request: UnpinOneRequest): string[] {
+  return ['unpin', request.name];
 }
 
 export class HomebrewService {
@@ -322,6 +332,148 @@ export class HomebrewService {
         throw error;
       }
     }, uninstallTimeoutMs);
+  }
+
+  async pinOne(request: PinOneRequest, sink: JobEventSink): Promise<BrewJobCompleteEvent> {
+    const jobId = randomUUID();
+    const command = buildPinCommand(request);
+    const pinTimeoutMs = 5 * 60 * 1000;
+
+    sink.onProgress({
+      jobId,
+      stage: 'queued',
+      message: `Queued pin for ${request.name}`,
+      packageName: request.name,
+      kind: request.kind,
+      timestamp: new Date().toISOString()
+    });
+
+    return this.mutationQueue.enqueue(async (signal) => {
+      sink.onProgress({
+        jobId,
+        stage: 'running',
+        message: `Pinning ${request.name}`,
+        packageName: request.name,
+        kind: request.kind,
+        timestamp: new Date().toISOString()
+      });
+
+      try {
+        const result = await this.runner.runText(command, {
+          signal,
+          timeoutMs: pinTimeoutMs,
+          onStdout: (chunk) =>
+            sink.onProgress({
+              jobId,
+              stage: 'output',
+              message: chunk,
+              packageName: request.name,
+              kind: request.kind,
+              timestamp: new Date().toISOString()
+            }),
+          onStderr: (chunk) =>
+            sink.onProgress({
+              jobId,
+              stage: 'output',
+              message: chunk,
+              packageName: request.name,
+              kind: request.kind,
+              timestamp: new Date().toISOString()
+            })
+        });
+
+        const event: BrewJobCompleteEvent = {
+          jobId,
+          success: true,
+          output: `${result.stdout}${result.stderr}`.trim(),
+          timestamp: new Date().toISOString()
+        };
+
+        sink.onComplete(event);
+        return event;
+      } catch (error) {
+        const failed: BrewJobFailedEvent = {
+          jobId,
+          error: (error as Error).message,
+          output: '',
+          timestamp: new Date().toISOString()
+        };
+
+        sink.onFailed(failed);
+        throw error;
+      }
+    }, pinTimeoutMs);
+  }
+
+  async unpinOne(request: UnpinOneRequest, sink: JobEventSink): Promise<BrewJobCompleteEvent> {
+    const jobId = randomUUID();
+    const command = buildUnpinCommand(request);
+    const unpinTimeoutMs = 5 * 60 * 1000;
+
+    sink.onProgress({
+      jobId,
+      stage: 'queued',
+      message: `Queued unpin for ${request.name}`,
+      packageName: request.name,
+      kind: request.kind,
+      timestamp: new Date().toISOString()
+    });
+
+    return this.mutationQueue.enqueue(async (signal) => {
+      sink.onProgress({
+        jobId,
+        stage: 'running',
+        message: `Unpinning ${request.name}`,
+        packageName: request.name,
+        kind: request.kind,
+        timestamp: new Date().toISOString()
+      });
+
+      try {
+        const result = await this.runner.runText(command, {
+          signal,
+          timeoutMs: unpinTimeoutMs,
+          onStdout: (chunk) =>
+            sink.onProgress({
+              jobId,
+              stage: 'output',
+              message: chunk,
+              packageName: request.name,
+              kind: request.kind,
+              timestamp: new Date().toISOString()
+            }),
+          onStderr: (chunk) =>
+            sink.onProgress({
+              jobId,
+              stage: 'output',
+              message: chunk,
+              packageName: request.name,
+              kind: request.kind,
+              timestamp: new Date().toISOString()
+            })
+        });
+
+        const event: BrewJobCompleteEvent = {
+          jobId,
+          success: true,
+          output: `${result.stdout}${result.stderr}`.trim(),
+          timestamp: new Date().toISOString()
+        };
+
+        sink.onComplete(event);
+        return event;
+      } catch (error) {
+        const failed: BrewJobFailedEvent = {
+          jobId,
+          error: (error as Error).message,
+          output: '',
+          timestamp: new Date().toISOString()
+        };
+
+        sink.onFailed(failed);
+        throw error;
+      }
+    }, unpinTimeoutMs);
   }
 
   async upgradeAll(sink: JobEventSink): Promise<BrewJobCompleteEvent> {

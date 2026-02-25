@@ -9,6 +9,8 @@ import {
   brewJobProgressEventSchema,
   checkNowResultSchema,
   installOneRequestSchema,
+  pinOneRequestSchema,
+  unpinOneRequestSchema,
   uninstallOneRequestSchema,
   installedPackageSchema,
   outdatedPackageSchema,
@@ -69,6 +71,18 @@ const api: BrewGuiBridge = {
   async uninstallOne(request) {
     const parsedRequest = uninstallOneRequestSchema.parse(request);
     const payload = await ipcRenderer.invoke(IPC_CHANNELS.UNINSTALL_ONE, parsedRequest);
+    return brewJobCompleteEventSchema.parse(payload);
+  },
+
+  async pinOne(request) {
+    const parsedRequest = pinOneRequestSchema.parse(request);
+    const payload = await ipcRenderer.invoke(IPC_CHANNELS.PIN_ONE, parsedRequest);
+    return brewJobCompleteEventSchema.parse(payload);
+  },
+
+  async unpinOne(request) {
+    const parsedRequest = unpinOneRequestSchema.parse(request);
+    const payload = await ipcRenderer.invoke(IPC_CHANNELS.UNPIN_ONE, parsedRequest);
     return brewJobCompleteEventSchema.parse(payload);
   },
 
