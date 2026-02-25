@@ -71,7 +71,8 @@ export class SidebarNavComponent {
     { label: 'Updates', route: '/updates', icon: 'arrow-up' },
     { label: 'Installed', route: '/installed', icon: 'square-library' },
     { label: 'Browse', route: '/browse', icon: 'search' },
-    { label: 'Taps', route: '/taps', icon: 'layers-2' }
+    { label: 'Taps', route: '/taps', icon: 'layers-2' },
+    { label: 'Cleanup', route: '/cleanup', icon: 'trash' }
   ];
 
   protected readonly settingsItem: { label: string; route: string; icon: ZardIcon } = {

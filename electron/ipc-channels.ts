@@ -15,6 +15,8 @@ export const IPC_CHANNELS = {
   UNPIN_ONE: 'brew:unpinOne',
   TAP_ADD: 'brew:tapAdd',
   TAP_REMOVE: 'brew:tapRemove',
+  CLEANUP_PREVIEW: 'brew:cleanupPreview',
+  CLEANUP_RUN: 'brew:cleanupRun',
   UPGRADE_ONE: 'brew:upgradeOne',
   UPGRADE_ALL: 'brew:upgradeAll',
   CHECK_NOW: 'brew:checkNow',

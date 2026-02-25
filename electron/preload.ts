@@ -8,6 +8,7 @@ import {
   brewJobFailedEventSchema,
   brewJobProgressEventSchema,
   checkNowResultSchema,
+  cleanupPreviewResultSchema,
   installOneRequestSchema,
   getTapsResponseSchema,
   packageDetailsRequestSchema,
@@ -67,6 +68,11 @@ const api: BrewGuiBridge = {
     return getTapsResponseSchema.parse(payload);
   },
 
+  async getCleanupPreview() {
+    const payload = await ipcRenderer.invoke(IPC_CHANNELS.CLEANUP_PREVIEW);
+    return cleanupPreviewResultSchema.parse(payload);
+  },
+
   async getPackageDetails(request) {
     const parsedRequest = packageDetailsRequestSchema.parse(request);
     const payload = await ipcRenderer.invoke(IPC_CHANNELS.GET_PACKAGE_DETAILS, parsedRequest);
@@ -118,6 +124,11 @@ const api: BrewGuiBridge = {
   async tapRemove(request) {
     const parsedRequest = tapRemoveRequestSchema.parse(request);
     const payload = await ipcRenderer.invoke(IPC_CHANNELS.TAP_REMOVE, parsedRequest);
+    return brewJobCompleteEventSchema.parse(payload);
+  },
+
+  async runCleanup() {
+    const payload = await ipcRenderer.invoke(IPC_CHANNELS.CLEANUP_RUN);
     return brewJobCompleteEventSchema.parse(payload);
   },
 

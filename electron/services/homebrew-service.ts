@@ -12,6 +12,8 @@ import type {
   BrewJobStream,
   BrewTap,
   CatalogPackage,
+  CleanupPreviewItem,
+  CleanupPreviewResult,
   CheckNowResult,
   InstallOneRequest,
   InstalledPackage,
@@ -46,6 +48,8 @@ import { BrewCommandError, BrewRunner } from './brew-runner';
 const CATALOG_TTL_MS = 24 * 60 * 60 * 1000;
 const DETAILS_TTL_MS = 10 * 60 * 1000;
 const TAP_READ_TIMEOUT_MS = 30_000;
+const CLEANUP_PREVIEW_TIMEOUT_MS = 10 * 60 * 1000;
+const CLEANUP_RUN_TIMEOUT_MS = 30 * 60 * 1000;
 const PROTECTED_TAP_NAMES = new Set(['homebrew/core', 'homebrew/cask']);
 const PROTECTED_TAP_ALIASES = new Map<string, string>([
   ['homebrew/homebrew-core', 'homebrew/core'],
@@ -234,6 +238,21 @@ export class HomebrewService {
     );
 
     return items.sort(compareBrewTaps);
+  }
+
+  async getCleanupPreview(): Promise<CleanupPreviewResult> {
+    const command = ['cleanup', '--dry-run'];
+    const result = await this.mutationQueue.enqueue(
+      (signal) =>
+        this.runner.runText(command, {
+          signal,
+          timeoutMs: CLEANUP_PREVIEW_TIMEOUT_MS
+        }),
+      CLEANUP_PREVIEW_TIMEOUT_MS
+    );
+    const rawOutput = `${result.stdout}${result.stderr}`.trim();
+
+    return parseCleanupPreviewOutput(rawOutput, `brew ${command.join(' ')}`);
   }
 
   async checkNow(): Promise<CheckNowResult> {
@@ -540,6 +559,21 @@ export class HomebrewService {
     } finally {
       this.invalidateAllDetailsCache();
     }
+  }
+
+  async runCleanup(sink: JobEventSink): Promise<BrewJobCompleteEvent> {
+    return this.runQueuedTrackedJob({
+      action: 'cleanup',
+      command: ['cleanup'],
+      target: {
+        packageName: null,
+        kind: 'system'
+      },
+      timeoutMs: CLEANUP_RUN_TIMEOUT_MS,
+      queuedMessage: 'Queued Homebrew cleanup',
+      runningMessage: 'Running Homebrew cleanup',
+      sink
+    });
   }
 
   async upgradeAll(sink: JobEventSink): Promise<BrewJobCompleteEvent> {
@@ -1685,6 +1719,142 @@ function mergeDependencyGroups(
   }
 
   return Array.from(grouped.values());
+}
+
+function parseCleanupPreviewOutput(rawOutput: string, command: string): CleanupPreviewResult {
+  const lines = rawOutput.split(/\r?\n/);
+  const items: CleanupPreviewItem[] = [];
+  let summaryTotalBytes: number | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    if (trimmed.startsWith('Would remove:')) {
+      const parsed = parseCleanupPreviewLine(trimmed);
+      if (parsed) {
+        items.push(parsed);
+      }
+      continue;
+    }
+
+    if (trimmed.toLocaleLowerCase().includes('would free approximately')) {
+      summaryTotalBytes = parseCleanupSummaryBytes(trimmed);
+    }
+  }
+
+  const parsedItemTotals = items
+    .map((item) => item.sizeBytes)
+    .filter((size): size is number => size !== null);
+  const hasNothingToDo = lines.some((line) => line.trim().toLocaleLowerCase() === 'nothing to do.');
+  const fallbackTotalBytes =
+    parsedItemTotals.length > 0
+      ? parsedItemTotals.reduce((total, size) => total + size, 0)
+      : hasNothingToDo
+        ? 0
+        : null;
+
+  return {
+    command,
+    items,
+    totalBytes: summaryTotalBytes ?? fallbackTotalBytes,
+    rawOutput,
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function parseCleanupPreviewLine(line: string): CleanupPreviewItem | null {
+  const entry = line.replace(/^Would remove:\s*/u, '').trim();
+  if (!entry) {
+    return null;
+  }
+
+  const metadataMatch = entry.match(/^(.*?)(?:\s+\((.+)\))?$/u);
+  if (!metadataMatch) {
+    return null;
+  }
+
+  const path = metadataMatch[1]?.trim() ?? '';
+  if (!path) {
+    return null;
+  }
+
+  const metadata = metadataMatch[2]?.trim() ?? null;
+
+  return {
+    path,
+    sizeBytes: parseMetadataSizeBytes(metadata),
+    fileCount: parseMetadataFileCount(metadata),
+    metadata
+  };
+}
+
+function parseCleanupSummaryBytes(line: string): number | null {
+  const match = line.match(
+    /would free approximately\s+([0-9][0-9,]*(?:\.[0-9]+)?)\s*(B|KB|MB|GB|TB|PB)\b/i
+  );
+  if (!match) {
+    return null;
+  }
+
+  return parseHumanReadableBytes(match[1] ?? '', match[2] ?? '');
+}
+
+function parseMetadataSizeBytes(metadata: string | null): number | null {
+  if (!metadata) {
+    return null;
+  }
+
+  const matches = [...metadata.matchAll(/([0-9][0-9,]*(?:\.[0-9]+)?)\s*(B|KB|MB|GB|TB|PB)\b/gi)];
+  if (matches.length === 0) {
+    return null;
+  }
+
+  const last = matches[matches.length - 1];
+  if (!last) {
+    return null;
+  }
+
+  return parseHumanReadableBytes(last[1] ?? '', last[2] ?? '');
+}
+
+function parseMetadataFileCount(metadata: string | null): number | null {
+  if (!metadata) {
+    return null;
+  }
+
+  const match = metadata.match(/([0-9][0-9,]*)\s+files?/i);
+  if (!match?.[1]) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(match[1].replaceAll(',', ''), 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function parseHumanReadableBytes(valueText: string, unitText: string): number | null {
+  const numberValue = Number.parseFloat(valueText.replaceAll(',', ''));
+  if (!Number.isFinite(numberValue)) {
+    return null;
+  }
+
+  const multiplier: Record<string, number> = {
+    B: 1,
+    KB: 1024,
+    MB: 1024 ** 2,
+    GB: 1024 ** 3,
+    TB: 1024 ** 4,
+    PB: 1024 ** 5
+  };
+  const unit = unitText.toUpperCase();
+  const unitMultiplier = multiplier[unit];
+  if (!unitMultiplier) {
+    return null;
+  }
+
+  return Math.round(numberValue * unitMultiplier);
 }
 
 function uniqueStrings(values: string[]): string[] {

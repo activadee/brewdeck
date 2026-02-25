@@ -253,6 +253,23 @@ export const checkNowResultSchema = z.object({
 });
 export type CheckNowResult = z.infer<typeof checkNowResultSchema>;
 
+export const cleanupPreviewItemSchema = z.object({
+  path: z.string(),
+  sizeBytes: z.number().int().nonnegative().nullable(),
+  fileCount: z.number().int().nonnegative().nullable(),
+  metadata: z.string().nullable()
+});
+export type CleanupPreviewItem = z.infer<typeof cleanupPreviewItemSchema>;
+
+export const cleanupPreviewResultSchema = z.object({
+  command: z.string().min(1),
+  items: z.array(cleanupPreviewItemSchema),
+  totalBytes: z.number().int().nonnegative().nullable(),
+  rawOutput: z.string(),
+  generatedAt: z.string()
+});
+export type CleanupPreviewResult = z.infer<typeof cleanupPreviewResultSchema>;
+
 export const syncMetadataResultSchema = z.object({
   success: z.boolean(),
   output: z.string(),
@@ -311,6 +328,7 @@ export const brewJobActionSchema = z.union([
   z.literal('reinstall'),
   z.literal('upgradeOne'),
   z.literal('upgradeAll'),
+  z.literal('cleanup'),
   z.literal('pin'),
   z.literal('unpin'),
   z.literal('tapAdd'),
@@ -390,6 +408,7 @@ export interface BrewGuiBridge {
   getInstalled(): Promise<InstalledPackage[]>;
   getOutdated(): Promise<OutdatedPackage[]>;
   getTaps(): Promise<GetTapsResponse>;
+  getCleanupPreview(): Promise<CleanupPreviewResult>;
   getPackageDetails(request: PackageDetailsRequest): Promise<PackageDetails>;
   searchCatalog(request: SearchCatalogRequest): Promise<SearchCatalogResponse>;
   installOne(request: InstallOneRequest): Promise<BrewJobCompleteEvent>;
@@ -401,6 +420,7 @@ export interface BrewGuiBridge {
   tapRemove(request: TapRemoveRequest): Promise<BrewJobCompleteEvent>;
   upgradeOne(request: UpgradeOneRequest): Promise<BrewJobCompleteEvent>;
   upgradeAll(): Promise<BrewJobCompleteEvent>;
+  runCleanup(): Promise<BrewJobCompleteEvent>;
   checkNow(): Promise<CheckNowResult>;
   syncMetadata(): Promise<SyncMetadataResult>;
   getSettings(): Promise<AppSettings>;

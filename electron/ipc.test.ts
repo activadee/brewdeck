@@ -20,6 +20,8 @@ describe('IPC channel allowlist', () => {
     expect(channels).toContain('brew:unpinOne');
     expect(channels).toContain('brew:tapAdd');
     expect(channels).toContain('brew:tapRemove');
+    expect(channels).toContain('brew:cleanupPreview');
+    expect(channels).toContain('brew:cleanupRun');
     expect(channels).toContain('brew:upgradeOne');
     expect(channels).toContain('brew:upgradeAll');
     expect(channels).toContain('brew:checkNow');
