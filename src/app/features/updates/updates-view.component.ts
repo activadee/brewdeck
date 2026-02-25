@@ -12,6 +12,7 @@ import { UpdateSummaryCardComponent } from '../../components/ux/update-summary-c
 import { UpgradeConfirmDialogComponent } from '../../components/ux/upgrade-confirm-dialog.component';
 import { ToastService } from '../../core/services/toast.service';
 import { InstalledStore } from '../../core/stores/installed.store';
+import { PackageDetailsStore } from '../../core/stores/package-details.store';
 import { UpdatesStore } from '../../core/stores/updates.store';
 
 @Component({
@@ -118,6 +119,7 @@ import { UpdatesStore } from '../../core/stores/updates.store';
 export class UpdatesViewComponent {
   protected readonly updatesStore = inject(UpdatesStore);
   protected readonly installedStore = inject(InstalledStore);
+  protected readonly packageDetailsStore = inject(PackageDetailsStore);
   private readonly toast = inject(ToastService);
 
   protected readonly filterOptions = [
@@ -183,6 +185,10 @@ export class UpdatesViewComponent {
     if (item.kind === 'cask') {
       return [
         {
+          id: 'view-details',
+          label: 'View details'
+        },
+        {
           id: 'pin-not-supported',
           label: 'Pin not supported for casks',
           disabled: true
@@ -191,8 +197,14 @@ export class UpdatesViewComponent {
     }
 
     return item.pinned
-      ? [{ id: 'unpin', label: 'Unpin formula', disabled: busy }]
-      : [{ id: 'pin', label: 'Pin formula', disabled: busy }];
+      ? [
+          { id: 'view-details', label: 'View details' },
+          { id: 'unpin', label: 'Unpin formula', disabled: busy }
+        ]
+      : [
+          { id: 'view-details', label: 'View details' },
+          { id: 'pin', label: 'Pin formula', disabled: busy }
+        ];
   }
 
   protected openUpgradeOne(item: OutdatedPackage): void {
@@ -241,6 +253,11 @@ export class UpdatesViewComponent {
   }
 
   protected async onOverflowAction(item: OutdatedPackage, action: string): Promise<void> {
+    if (action === 'view-details') {
+      await this.packageDetailsStore.openFor({ kind: item.kind, name: item.name });
+      return;
+    }
+
     if (this.actionBusy() || item.kind !== 'formula') {
       return;
     }

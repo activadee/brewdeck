@@ -7,6 +7,7 @@ import { BrewFacadeService } from '../../core/services/brew-facade.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CatalogStore } from '../../core/stores/catalog.store';
 import { InstalledStore } from '../../core/stores/installed.store';
+import { PackageDetailsStore } from '../../core/stores/package-details.store';
 import { UpdatesStore } from '../../core/stores/updates.store';
 import { BrowseCatalogViewComponent } from './browse-catalog-view.component';
 
@@ -55,6 +56,7 @@ describe('BrowseCatalogViewComponent', () => {
     const catalogStore = createCatalogStore(items);
     const installedStore = createInstalledStore(installedIds);
     const updatesStore = { refresh: vi.fn(async () => undefined) };
+    const packageDetailsStore = { openFor: vi.fn(async () => undefined) };
     const facade = { installOne: vi.fn(async () => undefined) };
     const toast = { push: vi.fn() };
 
@@ -64,6 +66,7 @@ describe('BrowseCatalogViewComponent', () => {
         { provide: CatalogStore, useValue: catalogStore },
         { provide: InstalledStore, useValue: installedStore },
         { provide: UpdatesStore, useValue: updatesStore },
+        { provide: PackageDetailsStore, useValue: packageDetailsStore },
         { provide: BrewFacadeService, useValue: facade },
         { provide: ToastService, useValue: toast }
       ]
@@ -74,7 +77,7 @@ describe('BrowseCatalogViewComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    return { fixture, facade, catalogStore, installedStore, updatesStore, toast };
+    return { fixture, facade, catalogStore, installedStore, updatesStore, packageDetailsStore, toast };
   }
 
   it('shows install action for installable packages', async () => {
@@ -125,6 +128,25 @@ describe('BrowseCatalogViewComponent', () => {
     expect(updatesStore.refresh).toHaveBeenCalled();
     expect(catalogStore.refresh).toHaveBeenCalled();
     expect(toast.push).toHaveBeenCalledWith('Installed ripgrep.', 'success');
+  });
+
+  it('exposes view-details overflow action for browse rows', async () => {
+    const { fixture } = await render([baseItem]);
+    const component = fixture.componentInstance as any;
+
+    expect(component.overflowActionsFor(baseItem)).toEqual([{ id: 'view-details', label: 'View details' }]);
+  });
+
+  it('opens details drawer from overflow action', async () => {
+    const { fixture, packageDetailsStore } = await render([baseItem]);
+    const component = fixture.componentInstance as any;
+
+    await component.onOverflowAction(baseItem, 'view-details');
+
+    expect(packageDetailsStore.openFor).toHaveBeenCalledWith({
+      kind: 'formula',
+      name: 'ripgrep'
+    });
   });
 });
 

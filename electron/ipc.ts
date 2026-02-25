@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain } from 'electron';
 
 import {
   installOneRequestSchema,
+  packageDetailsRequestSchema,
   pinOneRequestSchema,
   reinstallOneRequestSchema,
   unpinOneRequestSchema,
@@ -74,6 +75,10 @@ export function registerIpcHandlers(options: RegisterIpcOptions): void {
   ipcMain.handle(IPC_CHANNELS.GET_BREW_AVAILABILITY, async () => homebrew.getBrewAvailability());
   ipcMain.handle(IPC_CHANNELS.GET_INSTALLED, async () => homebrew.getInstalled());
   ipcMain.handle(IPC_CHANNELS.GET_OUTDATED, async () => homebrew.getOutdated());
+  ipcMain.handle(IPC_CHANNELS.GET_PACKAGE_DETAILS, async (_event, payload) => {
+    const parsed = packageDetailsRequestSchema.parse(payload);
+    return homebrew.getPackageDetails(parsed);
+  });
 
   ipcMain.handle(IPC_CHANNELS.SEARCH_CATALOG, async (_event, payload) => {
     const parsed = searchCatalogRequestSchema.parse(payload);

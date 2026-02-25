@@ -30,8 +30,10 @@ Brew Sidebar becomes the safest and fastest desktop control plane for Homebrew: 
   - Pin/unpin formulae from Installed and Updates rows.
   - Visual pinned badges and pinned filtering in Installed and Updates.
   - Pinned formulae stay visible in Updates and require unpin before upgrade.
-- Add package details drawer:
-  - Version history, homepage, license, dependencies, caveats.
+- [x] Add package details drawer (completed February 25, 2026):
+  - Right-side details sheet from Installed, Updates, and Browse overflow actions.
+  - Hybrid details resolution (`brew info` + Homebrew API fallback) with partial warnings.
+  - Version snapshot, homepage, license, dependencies, and caveats.
 - Add per-action progress log:
   - Show running command, structured progress stages, exit status.
 

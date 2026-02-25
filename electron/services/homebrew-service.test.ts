@@ -7,10 +7,12 @@ vi.mock('electron', () => ({
 }));
 
 import {
+  packageDetailsRequestSchema,
   reinstallOneRequestSchema,
   pinOneRequestSchema,
   unpinOneRequestSchema,
-  uninstallOneRequestSchema
+  uninstallOneRequestSchema,
+  type PackageDetails
 } from '../../src/shared/contracts';
 import {
   buildInstallCommand,
@@ -151,6 +153,169 @@ describe('unpinOneRequestSchema', () => {
   });
 });
 
+describe('packageDetailsRequestSchema', () => {
+  it('rejects empty package names', () => {
+    const parsed = packageDetailsRequestSchema.safeParse({
+      kind: 'formula',
+      name: ''
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+});
+
+describe('HomebrewService.getPackageDetails', () => {
+  const request = { kind: 'formula', name: 'ripgrep' } as const;
+
+  const createDetails = (overrides: Partial<PackageDetails> = {}): PackageDetails => {
+    const base: PackageDetails = {
+      id: 'formula:ripgrep',
+      kind: 'formula',
+      name: 'ripgrep',
+      fullName: 'ripgrep',
+      desc: 'Search recursively',
+      homepage: 'https://example.com/ripgrep',
+      tap: 'homebrew/core',
+      license: 'Unlicense',
+      dependencies: [{ key: 'runtime', label: 'Runtime dependencies', items: ['pcre2'] }],
+      caveats: null,
+      versionSnapshot: {
+        installedVersions: ['14.1.0'],
+        currentVersion: '14.1.0',
+        stableVersion: '14.1.0',
+        headVersion: null
+      },
+      deprecated: false,
+      disabled: false,
+      pinned: false,
+      warnings: [],
+      source: 'local',
+      fetchedAt: '2026-02-25T00:00:00.000Z'
+    };
+
+    return {
+      ...base,
+      ...overrides,
+      dependencies: overrides.dependencies ?? base.dependencies,
+      warnings: overrides.warnings ?? base.warnings,
+      versionSnapshot: {
+        ...base.versionSnapshot,
+        ...(overrides.versionSnapshot ?? {})
+      }
+    };
+  };
+
+  it('returns local details when remote lookup fails', async () => {
+    const service = new HomebrewService() as any;
+    service.resolveLocalDetails = vi.fn(async () => createDetails({ source: 'local' }));
+    service.resolveRemoteDetails = vi.fn(async () => {
+      throw new Error('remote unavailable');
+    });
+
+    const result = await service.getPackageDetails(request);
+
+    expect(result.source).toBe('local');
+    expect(result.name).toBe('ripgrep');
+    expect(result.warnings.some((warning) => warning.includes('Remote Homebrew API unavailable'))).toBe(
+      true
+    );
+  });
+
+  it('returns remote details when local lookup fails', async () => {
+    const service = new HomebrewService() as any;
+    service.resolveLocalDetails = vi.fn(async () => {
+      throw new Error('local unavailable');
+    });
+    service.resolveRemoteDetails = vi.fn(async () => createDetails({ source: 'remote', pinned: false }));
+
+    const result = await service.getPackageDetails(request);
+
+    expect(result.source).toBe('remote');
+    expect(result.name).toBe('ripgrep');
+    expect(result.warnings.some((warning) => warning.includes('Local brew info unavailable'))).toBe(true);
+  });
+
+  it('merges local and remote details into hybrid payload', async () => {
+    const service = new HomebrewService() as any;
+    service.resolveLocalDetails = vi.fn(async () =>
+      createDetails({
+        desc: null,
+        homepage: null,
+        pinned: true,
+        dependencies: [{ key: 'runtime', label: 'Runtime dependencies', items: ['pcre2'] }],
+        source: 'local'
+      })
+    );
+    service.resolveRemoteDetails = vi.fn(async () =>
+      createDetails({
+        desc: 'Remote description',
+        homepage: 'https://formulae.brew.sh/formula/ripgrep',
+        dependencies: [{ key: 'build', label: 'Build dependencies', items: ['cmake'] }],
+        source: 'remote'
+      })
+    );
+
+    const result = await service.getPackageDetails(request);
+
+    expect(result.source).toBe('hybrid');
+    expect(result.desc).toBe('Remote description');
+    expect(result.homepage).toBe('https://formulae.brew.sh/formula/ripgrep');
+    expect(result.pinned).toBe(true);
+    expect(result.dependencies.map((group) => group.key)).toEqual(
+      expect.arrayContaining(['runtime', 'build'])
+    );
+  });
+
+  it('returns a cache result when the cache entry is still fresh', async () => {
+    const service = new HomebrewService() as any;
+    service.detailsCache.set('formula:ripgrep', {
+      details: createDetails({ source: 'hybrid' }),
+      cachedAt: Date.now()
+    });
+    service.resolveLocalDetails = vi.fn();
+    service.resolveRemoteDetails = vi.fn();
+
+    const result = await service.getPackageDetails(request);
+
+    expect(result.source).toBe('cache');
+    expect(service.resolveLocalDetails).not.toHaveBeenCalled();
+    expect(service.resolveRemoteDetails).not.toHaveBeenCalled();
+  });
+
+  it('falls back to stale cache when live lookups fail', async () => {
+    const service = new HomebrewService() as any;
+    service.detailsCache.set('formula:ripgrep', {
+      details: createDetails({ source: 'hybrid', warnings: ['cached baseline warning'] }),
+      cachedAt: Date.now() - 11 * 60 * 1000
+    });
+    service.resolveLocalDetails = vi.fn(async () => {
+      throw new Error('local unavailable');
+    });
+    service.resolveRemoteDetails = vi.fn(async () => {
+      throw new Error('remote unavailable');
+    });
+
+    const result = await service.getPackageDetails(request);
+
+    expect(result.source).toBe('cache');
+    expect(result.warnings.some((warning) => warning.includes('Using cached package details'))).toBe(true);
+  });
+
+  it('throws when both local and remote lookups fail without cache', async () => {
+    const service = new HomebrewService() as any;
+    service.resolveLocalDetails = vi.fn(async () => {
+      throw new Error('local unavailable');
+    });
+    service.resolveRemoteDetails = vi.fn(async () => {
+      throw new Error('remote unavailable');
+    });
+
+    await expect(service.getPackageDetails(request)).rejects.toThrow(
+      'Unable to load package details for formula:ripgrep.'
+    );
+  });
+});
+
 describe('HomebrewService.installOne', () => {
   it('enqueues install jobs with the full install timeout', async () => {
     const service = new HomebrewService() as any;
@@ -173,6 +338,32 @@ describe('HomebrewService.installOne', () => {
 
     expect(enqueue).toHaveBeenCalledTimes(1);
     expect(enqueue.mock.calls[0]?.[1]).toBe(20 * 60 * 1000);
+  });
+
+  it('invalidates package details cache for the installed package', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => ({ stdout: 'ok', stderr: '', exitCode: 0 }));
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+    service.detailsCache.set('formula:ripgrep', {
+      details: { id: 'formula:ripgrep' },
+      cachedAt: Date.now()
+    });
+
+    await service.installOne(
+      { kind: 'formula', name: 'ripgrep' },
+      {
+        onProgress: () => undefined,
+        onComplete: () => undefined,
+        onFailed: () => undefined
+      }
+    );
+
+    expect(service.detailsCache.has('formula:ripgrep')).toBe(false);
   });
 });
 
@@ -273,5 +464,37 @@ describe('HomebrewService.unpinOne', () => {
 
     expect(enqueue).toHaveBeenCalledTimes(1);
     expect(enqueue.mock.calls[0]?.[1]).toBe(5 * 60 * 1000);
+  });
+});
+
+describe('HomebrewService.upgradeAll', () => {
+  it('invalidates all package details cache entries after upgrade-all', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi
+      .fn()
+      .mockResolvedValueOnce({ stdout: 'formula ok', stderr: '', exitCode: 0 })
+      .mockResolvedValueOnce({ stdout: 'cask ok', stderr: '', exitCode: 0 });
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+    service.detailsCache.set('formula:ripgrep', {
+      details: { id: 'formula:ripgrep' },
+      cachedAt: Date.now()
+    });
+    service.detailsCache.set('cask:firefox', {
+      details: { id: 'cask:firefox' },
+      cachedAt: Date.now()
+    });
+
+    await service.upgradeAll({
+      onProgress: () => undefined,
+      onComplete: () => undefined,
+      onFailed: () => undefined
+    });
+
+    expect(service.detailsCache.size).toBe(0);
   });
 });

@@ -14,6 +14,7 @@ import { BrewFacadeService } from '../../core/services/brew-facade.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CatalogStore } from '../../core/stores/catalog.store';
 import { InstalledStore } from '../../core/stores/installed.store';
+import { PackageDetailsStore } from '../../core/stores/package-details.store';
 import { UpdatesStore } from '../../core/stores/updates.store';
 
 @Component({
@@ -124,6 +125,7 @@ export class InstalledPackagesViewComponent {
   protected readonly installedStore = inject(InstalledStore);
   protected readonly updatesStore = inject(UpdatesStore);
   protected readonly catalogStore = inject(CatalogStore);
+  protected readonly packageDetailsStore = inject(PackageDetailsStore);
   private readonly facade = inject(BrewFacadeService);
   private readonly toast = inject(ToastService);
 
@@ -231,6 +233,10 @@ export class InstalledPackagesViewComponent {
     if (item.kind === 'cask') {
       return [
         {
+          id: 'view-details',
+          label: 'View details'
+        },
+        {
           id: 'reinstall',
           label: 'Reinstall package',
           disabled: busy
@@ -245,16 +251,23 @@ export class InstalledPackagesViewComponent {
 
     return item.pinned
       ? [
+          { id: 'view-details', label: 'View details' },
           { id: 'reinstall', label: 'Reinstall package', disabled: busy },
           { id: 'unpin', label: 'Unpin formula', disabled: busy }
         ]
       : [
+          { id: 'view-details', label: 'View details' },
           { id: 'reinstall', label: 'Reinstall package', disabled: busy },
           { id: 'pin', label: 'Pin formula', disabled: busy }
         ];
   }
 
   protected async onOverflowAction(item: InstalledPackage, action: string): Promise<void> {
+    if (action === 'view-details') {
+      await this.packageDetailsStore.openFor({ kind: item.kind, name: item.name });
+      return;
+    }
+
     if (this.actionBusy()) {
       return;
     }

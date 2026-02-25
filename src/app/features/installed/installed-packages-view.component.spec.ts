@@ -7,6 +7,7 @@ import { BrewFacadeService } from '../../core/services/brew-facade.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CatalogStore } from '../../core/stores/catalog.store';
 import { InstalledStore } from '../../core/stores/installed.store';
+import { PackageDetailsStore } from '../../core/stores/package-details.store';
 import { UpdatesStore } from '../../core/stores/updates.store';
 import { InstalledPackagesViewComponent } from './installed-packages-view.component';
 
@@ -72,6 +73,7 @@ describe('InstalledPackagesViewComponent', () => {
     const installedStore = createInstalledStore(items);
     const updatesStore = { refresh: vi.fn(async () => undefined) };
     const catalogStore = { refresh: vi.fn(async () => undefined) };
+    const packageDetailsStore = { openFor: vi.fn(async () => undefined) };
     const facade = {
       uninstallOne: vi.fn(async () => createJobCompleteEvent(uninstallSuccess)),
       reinstallOne: vi.fn(async () => createJobCompleteEvent(reinstallSuccess))
@@ -84,6 +86,7 @@ describe('InstalledPackagesViewComponent', () => {
         { provide: InstalledStore, useValue: installedStore },
         { provide: UpdatesStore, useValue: updatesStore },
         { provide: CatalogStore, useValue: catalogStore },
+        { provide: PackageDetailsStore, useValue: packageDetailsStore },
         { provide: BrewFacadeService, useValue: facade },
         { provide: ToastService, useValue: toast }
       ]
@@ -94,7 +97,7 @@ describe('InstalledPackagesViewComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    return { fixture, installedStore, updatesStore, catalogStore, facade, toast };
+    return { fixture, installedStore, updatesStore, catalogStore, packageDetailsStore, facade, toast };
   }
 
   it('renders uninstall action for installed rows', async () => {
@@ -197,6 +200,7 @@ describe('InstalledPackagesViewComponent', () => {
     const component = fixture.componentInstance as any;
 
     expect(component.overflowActionsFor(formulaItem)).toEqual([
+      { id: 'view-details', label: 'View details' },
       { id: 'reinstall', label: 'Reinstall package', disabled: false },
       { id: 'pin', label: 'Pin formula', disabled: false }
     ]);
@@ -207,6 +211,7 @@ describe('InstalledPackagesViewComponent', () => {
     const component = fixture.componentInstance as any;
 
     expect(component.overflowActionsFor(pinnedFormulaItem)).toEqual([
+      { id: 'view-details', label: 'View details' },
       { id: 'reinstall', label: 'Reinstall package', disabled: false },
       { id: 'unpin', label: 'Unpin formula', disabled: false }
     ]);
@@ -217,9 +222,22 @@ describe('InstalledPackagesViewComponent', () => {
     const component = fixture.componentInstance as any;
 
     expect(component.overflowActionsFor(caskItem)).toEqual([
+      { id: 'view-details', label: 'View details' },
       { id: 'reinstall', label: 'Reinstall package', disabled: false },
       { id: 'pin-not-supported', label: 'Pin not supported for casks', disabled: true }
     ]);
+  });
+
+  it('opens details drawer from overflow action', async () => {
+    const { fixture, packageDetailsStore } = await render([formulaItem]);
+    const component = fixture.componentInstance as any;
+
+    await component.onOverflowAction(formulaItem, 'view-details');
+
+    expect(packageDetailsStore.openFor).toHaveBeenCalledWith({
+      kind: 'formula',
+      name: 'ripgrep'
+    });
   });
 
   it('submits formula reinstall without zap', async () => {

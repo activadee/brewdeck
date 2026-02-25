@@ -11,6 +11,8 @@ import {
   type BrewJobProgressEvent,
   type CheckNowResult,
   type InstallOneRequest,
+  type PackageDetails,
+  type PackageDetailsRequest,
   type PinOneRequest,
   type ReinstallOneRequest,
   type SearchCatalogRequest,
@@ -47,6 +49,32 @@ const createFallbackBridge = (): BrewGuiBridge => ({
   },
   async getOutdated() {
     return [];
+  },
+  async getPackageDetails(_request: PackageDetailsRequest): Promise<PackageDetails> {
+    return {
+      id: 'formula:unknown',
+      kind: 'formula',
+      name: 'unknown',
+      fullName: 'unknown',
+      desc: null,
+      homepage: null,
+      tap: null,
+      license: null,
+      dependencies: [],
+      caveats: null,
+      versionSnapshot: {
+        installedVersions: [],
+        currentVersion: null,
+        stableVersion: null,
+        headVersion: null
+      },
+      deprecated: false,
+      disabled: false,
+      pinned: false,
+      warnings: ['Electron bridge unavailable'],
+      source: 'cache',
+      fetchedAt: new Date().toISOString()
+    };
   },
   async searchCatalog(request: SearchCatalogRequest): Promise<SearchCatalogResponse> {
     return {

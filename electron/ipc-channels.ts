@@ -5,6 +5,7 @@ export const IPC_CHANNELS = {
   GET_BREW_AVAILABILITY: 'brew:getAvailability',
   GET_INSTALLED: 'brew:getInstalled',
   GET_OUTDATED: 'brew:getOutdated',
+  GET_PACKAGE_DETAILS: 'brew:getPackageDetails',
   SEARCH_CATALOG: 'brew:searchCatalog',
   INSTALL_ONE: 'brew:installOne',
   REINSTALL_ONE: 'brew:reinstallOne',

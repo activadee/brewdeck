@@ -5,6 +5,7 @@ import type { CatalogPackage } from '../../../shared/contracts';
 import { EmptyStateComponent } from '../../components/foundation/empty-state.component';
 import { LoadingStateComponent } from '../../components/foundation/loading-state.component';
 import { PackageFilterChipsComponent } from '../../components/shared/package-filter-chips.component';
+import type { PackageRowOverflowAction } from '../../components/shared/package-row-overflow-menu.component';
 import { PackageRowComponent } from '../../components/shared/package-row.component';
 import { PackageSearchInputComponent } from '../../components/shared/package-search-input.component';
 import { UpgradeConfirmDialogComponent } from '../../components/ux/upgrade-confirm-dialog.component';
@@ -12,6 +13,7 @@ import { BrewFacadeService } from '../../core/services/brew-facade.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CatalogStore } from '../../core/stores/catalog.store';
 import { InstalledStore } from '../../core/stores/installed.store';
+import { PackageDetailsStore } from '../../core/stores/package-details.store';
 import { UpdatesStore } from '../../core/stores/updates.store';
 
 @Component({
@@ -80,7 +82,9 @@ import { UpdatesStore } from '../../core/stores/updates.store';
               [actionLabel]="installActionLabel(item)"
               [actionDisabled]="installActionDisabled(item) || installBusy()"
               [actionVariant]="installActionVariant(item)"
+              [overflowActions]="overflowActionsFor(item)"
               (action)="openInstallDialog(item)"
+              (overflowAction)="onOverflowAction(item, $event)"
             />
           }
         </div>
@@ -127,6 +131,7 @@ export class BrowseCatalogViewComponent {
   protected readonly catalogStore = inject(CatalogStore);
   protected readonly installedStore = inject(InstalledStore);
   protected readonly updatesStore = inject(UpdatesStore);
+  protected readonly packageDetailsStore = inject(PackageDetailsStore);
   private readonly destroyRef = inject(DestroyRef);
   private readonly facade = inject(BrewFacadeService);
   private readonly toast = inject(ToastService);
@@ -219,6 +224,10 @@ export class BrowseCatalogViewComponent {
     return !this.canInstall(item);
   }
 
+  protected overflowActionsFor(_item: CatalogPackage): PackageRowOverflowAction[] {
+    return [{ id: 'view-details', label: 'View details' }];
+  }
+
   protected openInstallDialog(item: CatalogPackage): void {
     if (!this.canInstall(item) || this.installBusy()) {
       return;
@@ -233,6 +242,14 @@ export class BrowseCatalogViewComponent {
     }
 
     this.installTarget.set(null);
+  }
+
+  protected async onOverflowAction(item: CatalogPackage, action: string): Promise<void> {
+    if (action !== 'view-details') {
+      return;
+    }
+
+    await this.packageDetailsStore.openFor({ kind: item.kind, name: item.name });
   }
 
   protected async confirmInstall(): Promise<void> {

@@ -22,6 +22,7 @@ import { SidebarNavComponent } from '../components/foundation/sidebar-nav.compon
 import { TopStatusBarComponent } from '../components/foundation/top-status-bar.component';
 import { KeyboardShortcutsHintComponent } from '../components/polish/keyboard-shortcuts-hint.component';
 import { CommandPaletteComponent, type CommandPaletteAction } from '../components/ux/command-palette.component';
+import { PackageDetailsDrawerComponent } from '../components/ux/package-details-drawer.component';
 import { CommandProgressDrawerComponent } from '../components/ux/command-progress-drawer.component';
 import { ToastHostComponent } from '../components/ux/toast-host.component';
 import { BrewFacadeService } from '../core/services/brew-facade.service';
@@ -57,6 +58,7 @@ const ROUTE_LABELS: Record<string, string> = {
     BrewMissingViewComponent,
     KeyboardShortcutsHintComponent,
     CommandPaletteComponent,
+    PackageDetailsDrawerComponent,
     CommandProgressDrawerComponent,
     ToastHostComponent
   ],
@@ -131,6 +133,7 @@ const ROUTE_LABELS: Record<string, string> = {
       (closed)="paletteOpen.set(false)"
     />
 
+    <app-package-details-drawer />
     <app-command-progress-drawer />
     <app-toast-host />
   `,

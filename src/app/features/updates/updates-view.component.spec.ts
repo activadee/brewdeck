@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { OutdatedPackage } from '../../../shared/contracts';
 import { ToastService } from '../../core/services/toast.service';
 import { InstalledStore } from '../../core/stores/installed.store';
+import { PackageDetailsStore } from '../../core/stores/package-details.store';
 import { UpdatesStore } from '../../core/stores/updates.store';
 import { UpdatesViewComponent } from './updates-view.component';
 
@@ -62,6 +63,7 @@ describe('UpdatesViewComponent', () => {
   async function render(items: OutdatedPackage[]) {
     const updatesStore = createUpdatesStore(items);
     const installedStore = { refresh: vi.fn(async () => undefined) };
+    const packageDetailsStore = { openFor: vi.fn(async () => undefined) };
     const toast = { push: vi.fn() };
 
     await TestBed.configureTestingModule({
@@ -69,6 +71,7 @@ describe('UpdatesViewComponent', () => {
       providers: [
         { provide: UpdatesStore, useValue: updatesStore },
         { provide: InstalledStore, useValue: installedStore },
+        { provide: PackageDetailsStore, useValue: packageDetailsStore },
         { provide: ToastService, useValue: toast }
       ]
     }).compileComponents();
@@ -78,7 +81,7 @@ describe('UpdatesViewComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    return { fixture, updatesStore, installedStore, toast };
+    return { fixture, updatesStore, installedStore, packageDetailsStore, toast };
   }
 
   it('shows success toast and closes dialog when upgrade-all starts', async () => {
@@ -130,6 +133,7 @@ describe('UpdatesViewComponent', () => {
     const component = fixture.componentInstance as any;
 
     expect(component.overflowActionsFor(pinnedItem)).toEqual([
+      { id: 'view-details', label: 'View details' },
       { id: 'unpin', label: 'Unpin formula', disabled: false }
     ]);
   });
@@ -139,8 +143,21 @@ describe('UpdatesViewComponent', () => {
     const component = fixture.componentInstance as any;
 
     expect(component.overflowActionsFor(caskItem)).toEqual([
+      { id: 'view-details', label: 'View details' },
       { id: 'pin-not-supported', label: 'Pin not supported for casks', disabled: true }
     ]);
+  });
+
+  it('opens details drawer from overflow action', async () => {
+    const { fixture, packageDetailsStore } = await render([baseItem]);
+    const component = fixture.componentInstance as any;
+
+    await component.onOverflowAction(baseItem, 'view-details');
+
+    expect(packageDetailsStore.openFor).toHaveBeenCalledWith({
+      kind: 'formula',
+      name: 'ripgrep'
+    });
   });
 
   it('unpins formula and refreshes installed state from overflow action', async () => {

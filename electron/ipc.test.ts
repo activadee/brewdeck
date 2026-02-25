@@ -8,6 +8,7 @@ describe('IPC channel allowlist', () => {
 
     expect(channels).toContain('brew:getInstalled');
     expect(channels).toContain('brew:getOutdated');
+    expect(channels).toContain('brew:getPackageDetails');
     expect(channels).toContain('brew:searchCatalog');
     expect(channels).toContain('app:windowControl');
     expect(channels).toContain('app:getWindowChrome');

@@ -11,6 +11,8 @@ import type {
   InstallOneRequest,
   InstalledPackage,
   OutdatedPackage,
+  PackageDetails,
+  PackageDetailsRequest,
   PinOneRequest,
   ReinstallOneRequest,
   SearchCatalogRequest,
@@ -54,6 +56,10 @@ export class BrewFacadeService {
 
   getOutdated(): Promise<OutdatedPackage[]> {
     return this.bridge.api.getOutdated();
+  }
+
+  getPackageDetails(request: PackageDetailsRequest): Promise<PackageDetails> {
+    return this.bridge.api.getPackageDetails(request);
   }
 
   searchCatalog(request: SearchCatalogRequest): Promise<SearchCatalogResponse> {

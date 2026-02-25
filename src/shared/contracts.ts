@@ -71,6 +71,66 @@ export const searchCatalogResponseSchema = z.object({
 });
 export type SearchCatalogResponse = z.infer<typeof searchCatalogResponseSchema>;
 
+export const packageDetailsRequestSchema = z.object({
+  kind: packageKindSchema,
+  name: z.string().min(1)
+});
+export type PackageDetailsRequest = z.infer<typeof packageDetailsRequestSchema>;
+
+export const packageDependencyGroupKeySchema = z.union([
+  z.literal('runtime'),
+  z.literal('build'),
+  z.literal('recommended'),
+  z.literal('optional'),
+  z.literal('requirements'),
+  z.literal('constraints')
+]);
+export type PackageDependencyGroupKey = z.infer<typeof packageDependencyGroupKeySchema>;
+
+export const packageDependencyGroupSchema = z.object({
+  key: packageDependencyGroupKeySchema,
+  label: z.string(),
+  items: z.array(z.string())
+});
+export type PackageDependencyGroup = z.infer<typeof packageDependencyGroupSchema>;
+
+export const packageVersionSnapshotSchema = z.object({
+  installedVersions: z.array(z.string()),
+  currentVersion: z.string().nullable(),
+  stableVersion: z.string().nullable(),
+  headVersion: z.string().nullable()
+});
+export type PackageVersionSnapshot = z.infer<typeof packageVersionSnapshotSchema>;
+
+export const packageDetailsSourceSchema = z.union([
+  z.literal('local'),
+  z.literal('remote'),
+  z.literal('hybrid'),
+  z.literal('cache')
+]);
+export type PackageDetailsSource = z.infer<typeof packageDetailsSourceSchema>;
+
+export const packageDetailsSchema = z.object({
+  id: z.string(),
+  kind: packageKindSchema,
+  name: z.string(),
+  fullName: z.string(),
+  desc: z.string().nullable(),
+  homepage: z.string().nullable(),
+  tap: z.string().nullable(),
+  license: z.string().nullable(),
+  dependencies: z.array(packageDependencyGroupSchema),
+  caveats: z.string().nullable(),
+  versionSnapshot: packageVersionSnapshotSchema,
+  deprecated: z.boolean(),
+  disabled: z.boolean(),
+  pinned: z.boolean(),
+  warnings: z.array(z.string()),
+  source: packageDetailsSourceSchema,
+  fetchedAt: z.string()
+});
+export type PackageDetails = z.infer<typeof packageDetailsSchema>;
+
 export const upgradeOneRequestSchema = z.object({
   kind: packageKindSchema,
   name: z.string().min(1)
@@ -231,6 +291,7 @@ export interface BrewGuiBridge {
   getBrewAvailability(): Promise<BrewAvailability>;
   getInstalled(): Promise<InstalledPackage[]>;
   getOutdated(): Promise<OutdatedPackage[]>;
+  getPackageDetails(request: PackageDetailsRequest): Promise<PackageDetails>;
   searchCatalog(request: SearchCatalogRequest): Promise<SearchCatalogResponse>;
   installOne(request: InstallOneRequest): Promise<BrewJobCompleteEvent>;
   reinstallOne(request: ReinstallOneRequest): Promise<BrewJobCompleteEvent>;

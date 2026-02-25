@@ -1,0 +1,210 @@
+import { ChangeDetectionStrategy, Component, HostListener, computed, inject } from '@angular/core';
+
+import { ZardBadgeComponent } from '@/shared/components/badge';
+import { ZardButtonComponent } from '@/shared/components/button';
+import { ZardCardComponent } from '@/shared/components/card';
+import { ZardDividerComponent } from '@/shared/components/divider';
+import { ZardSkeletonComponent } from '@/shared/components/skeleton';
+import type { PackageDependencyGroup } from '../../../shared/contracts';
+import { PackageDetailsStore } from '../../core/stores/package-details.store';
+
+@Component({
+  selector: 'app-package-details-drawer',
+  imports: [
+    ZardBadgeComponent,
+    ZardButtonComponent,
+    ZardCardComponent,
+    ZardDividerComponent,
+    ZardSkeletonComponent
+  ],
+  template: `
+    @if (packageDetailsStore.open()) {
+      <div
+        class="fixed inset-0 z-40 bg-black/35 backdrop-blur-[2px] animate-in fade-in duration-150"
+        (click)="packageDetailsStore.close()"
+      ></div>
+
+      <aside
+        class="fixed inset-y-0 right-0 z-50 w-[min(470px,95vw)] animate-in slide-in-from-right duration-200"
+        (click)="$event.stopPropagation()"
+      >
+        <z-card class="h-full rounded-none border-l border-border/70 bg-card/96 shadow-2xl">
+          <div class="flex h-full flex-col">
+            <header class="space-y-2 p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0 space-y-1">
+                  <p class="mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Package details</p>
+                  <h3 class="truncate text-base font-semibold">{{ detailsName() }}</h3>
+                  @if (detailsFullName()) {
+                    <p class="mono truncate text-[11px] text-muted-foreground">{{ detailsFullName() }}</p>
+                  }
+                </div>
+
+                <button type="button" z-button zType="ghost" zSize="sm" (click)="packageDetailsStore.close()">
+                  Close
+                </button>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-1.5">
+                @if (detailsKind(); as kind) {
+                  <z-badge zType="outline" zShape="pill" class="mono text-[10px] uppercase">{{ kind }}</z-badge>
+                }
+                @if (detailsPinned()) {
+                  <z-badge zType="secondary" zShape="pill" class="mono text-[10px] uppercase">pinned</z-badge>
+                }
+                @if (detailsDeprecated()) {
+                  <z-badge zType="outline" zShape="pill" class="mono text-[10px] uppercase">deprecated</z-badge>
+                }
+                @if (detailsDisabled()) {
+                  <z-badge zType="outline" zShape="pill" class="mono text-[10px] uppercase">disabled</z-badge>
+                }
+                @if (detailsSource(); as source) {
+                  <z-badge zType="outline" zShape="pill" class="mono text-[10px] uppercase">{{ source }}</z-badge>
+                }
+              </div>
+            </header>
+
+            <z-divider zSpacing="none" />
+
+            <div class="flex-1 space-y-3 overflow-y-auto p-4">
+              @if (packageDetailsStore.loading()) {
+                <div class="space-y-3">
+                  <z-skeleton class="h-4 w-32" />
+                  <z-skeleton class="h-12 w-full" />
+                  <z-skeleton class="h-20 w-full" />
+                  <z-skeleton class="h-24 w-full" />
+                </div>
+              } @else if (packageDetailsStore.error()) {
+                <z-card class="border-destructive/30 bg-destructive/5 p-3">
+                  <p class="text-sm font-medium text-destructive">Unable to load package details</p>
+                  <p class="mt-1 text-xs text-muted-foreground">{{ packageDetailsStore.error() }}</p>
+                  <div class="mt-3 flex justify-end">
+                    <button type="button" z-button zSize="sm" (click)="reload()">Retry</button>
+                  </div>
+                </z-card>
+              } @else if (packageDetailsStore.details(); as details) {
+                @if (details.desc) {
+                  <section class="fade-up space-y-1.5">
+                    <h4 class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Summary</h4>
+                    <p class="text-sm text-foreground/90">{{ details.desc }}</p>
+                  </section>
+                }
+
+                @if (details.homepage) {
+                  <section class="fade-up space-y-1.5">
+                    <h4 class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Homepage</h4>
+                    <a
+                      z-button
+                      zType="outline"
+                      zSize="sm"
+                      class="inline-flex"
+                      [href]="details.homepage"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open homepage
+                    </a>
+                  </section>
+                }
+
+                <section class="fade-up space-y-2">
+                  <h4 class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Version snapshot</h4>
+                  <div class="grid grid-cols-1 gap-2">
+                    <z-card class="border-border/70 bg-muted/20 p-2 transition-colors duration-150 hover:bg-muted/35">
+                      <p class="mono text-[10px] uppercase text-muted-foreground">Installed</p>
+                      <p class="mt-1 text-sm">{{ formatInstalled(details.versionSnapshot.installedVersions) }}</p>
+                    </z-card>
+                    <z-card class="border-border/70 bg-muted/20 p-2 transition-colors duration-150 hover:bg-muted/35">
+                      <p class="mono text-[10px] uppercase text-muted-foreground">Current</p>
+                      <p class="mt-1 text-sm">{{ details.versionSnapshot.currentVersion ?? 'Unknown' }}</p>
+                    </z-card>
+                    <z-card class="border-border/70 bg-muted/20 p-2 transition-colors duration-150 hover:bg-muted/35">
+                      <p class="mono text-[10px] uppercase text-muted-foreground">Stable / Head</p>
+                      <p class="mt-1 text-sm">
+                        {{ details.versionSnapshot.stableVersion ?? 'Unknown' }}
+                        <span class="text-muted-foreground"> / </span>
+                        {{ details.versionSnapshot.headVersion ?? 'N/A' }}
+                      </p>
+                    </z-card>
+                  </div>
+                </section>
+
+                <section class="fade-up space-y-2">
+                  <h4 class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Dependencies</h4>
+                  @if (details.dependencies.length === 0) {
+                    <p class="text-xs text-muted-foreground">No dependencies declared.</p>
+                  } @else {
+                    <div class="space-y-2">
+                      @for (group of details.dependencies; track group.key) {
+                        <z-card class="border-border/70 bg-muted/20 p-2 transition-colors duration-150 hover:bg-muted/35">
+                          <p class="mono text-[10px] uppercase text-muted-foreground">{{ group.label }}</p>
+                          <p class="mt-1 text-xs">{{ formatDependencyItems(group) }}</p>
+                        </z-card>
+                      }
+                    </div>
+                  }
+                </section>
+
+                <section class="fade-up space-y-1.5">
+                  <h4 class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Caveats</h4>
+                  @if (details.caveats) {
+                    <pre class="overflow-x-auto rounded-md border border-border bg-muted/30 p-2 text-[11px] whitespace-pre-wrap">{{ details.caveats }}</pre>
+                  } @else {
+                    <p class="text-xs text-muted-foreground">No caveats provided.</p>
+                  }
+                </section>
+
+                @if (packageDetailsStore.warnings().length > 0) {
+                  <section class="fade-up space-y-1.5">
+                    <h4 class="text-xs font-semibold uppercase tracking-[0.08em] text-amber-700">Warnings</h4>
+                    <z-card class="border-amber-500/35 bg-amber-50/60 p-2">
+                      @for (warning of packageDetailsStore.warnings(); track $index) {
+                        <p class="text-xs text-amber-800">{{ warning }}</p>
+                      }
+                    </z-card>
+                  </section>
+                }
+              }
+            </div>
+          </div>
+        </z-card>
+      </aside>
+    }
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class PackageDetailsDrawerComponent {
+  protected readonly packageDetailsStore = inject(PackageDetailsStore);
+
+  protected readonly detailsName = computed(
+    () => this.packageDetailsStore.details()?.name ?? this.packageDetailsStore.target()?.name ?? 'Package'
+  );
+  protected readonly detailsFullName = computed(() => this.packageDetailsStore.details()?.fullName ?? null);
+  protected readonly detailsKind = computed(() => this.packageDetailsStore.details()?.kind ?? null);
+  protected readonly detailsPinned = computed(() => this.packageDetailsStore.details()?.pinned ?? false);
+  protected readonly detailsDeprecated = computed(() => this.packageDetailsStore.details()?.deprecated ?? false);
+  protected readonly detailsDisabled = computed(() => this.packageDetailsStore.details()?.disabled ?? false);
+  protected readonly detailsSource = computed(() => this.packageDetailsStore.details()?.source ?? null);
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    if (this.packageDetailsStore.open()) {
+      this.packageDetailsStore.close();
+    }
+  }
+
+  protected reload(): void {
+    void this.packageDetailsStore.reload();
+  }
+
+  protected formatInstalled(installedVersions: string[]): string {
+    if (installedVersions.length === 0) {
+      return 'Not installed';
+    }
+    return installedVersions.join(', ');
+  }
+
+  protected formatDependencyItems(group: PackageDependencyGroup): string {
+    return group.items.join(', ');
+  }
+}
