@@ -12,6 +12,7 @@ import type { ClassValue } from 'clsx';
 
 import { mergeClasses } from '@/shared/utils/merge-classes';
 
+import { ZardDropdownMenuComponent } from './dropdown.component';
 import { ZardDropdownService } from './dropdown.service';
 import { dropdownItemVariants, type ZardDropdownItemVariants } from './dropdown.variants';
 
@@ -36,6 +37,7 @@ import { dropdownItemVariants, type ZardDropdownItemVariants } from './dropdown.
 })
 export class ZardDropdownMenuItemComponent {
   private readonly dropdownService = inject(ZardDropdownService);
+  private readonly dropdownMenu = inject(ZardDropdownMenuComponent, { optional: true });
 
   readonly variant = input<ZardDropdownItemVariants['variant']>('default');
   readonly inset = input(false, { transform: booleanAttribute });
@@ -47,8 +49,13 @@ export class ZardDropdownMenuItemComponent {
       return;
     }
 
-    // Fechar dropdown após click
+    // Close the active dropdown implementation after the item action runs.
     setTimeout(() => {
+      if (this.dropdownMenu) {
+        this.dropdownMenu.close();
+        return;
+      }
+
       this.dropdownService.close();
     }, 0);
   }
