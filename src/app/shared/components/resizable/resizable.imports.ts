@@ -1,6 +1,6 @@
-import { ZardResizableHandleComponent } from '@/shared/components/resizable/resizable-handle.component';
-import { ZardResizablePanelComponent } from '@/shared/components/resizable/resizable-panel.component';
-import { ZardResizableComponent } from '@/shared/components/resizable/resizable.component';
+import { ZardResizableHandleComponent } from './resizable-handle/resizable-handle.component';
+import { ZardResizablePanelComponent } from './resizable-panel/resizable-panel.component';
+import { ZardResizableComponent } from './resizable/resizable.component';
 
 export const ZardResizableImports = [
   ZardResizableComponent,

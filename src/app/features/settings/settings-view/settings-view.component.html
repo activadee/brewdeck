@@ -1,0 +1,59 @@
+
+    <section class="ui-shell-enter space-y-2">
+      <header class="flex items-center justify-between gap-2">
+        <div>
+          <h2 class="text-lg font-semibold">Settings</h2>
+          <p class="mt-1 text-sm text-muted-foreground">
+            Notification and refresh behavior for the Brew Sidebar background agent.
+          </p>
+        </div>
+        <z-badge zType="outline" zShape="pill">Preferences</z-badge>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <z-card class="space-y-3 border-border/70 bg-card/95 shadow-sm">
+          <div class="space-y-1.5">
+            <p class="text-sm font-medium">Check interval</p>
+            <z-segmented
+              zSize="sm"
+              [zOptions]="intervalOptions"
+              formControlName="checkIntervalMinutes"
+              zAriaLabel="Update check interval"
+            />
+          </div>
+
+          <z-divider zSpacing="sm" />
+
+          <div class="space-y-2">
+            <z-switch formControlName="autoCheckOnLaunch">Check for updates on launch</z-switch>
+            <z-switch formControlName="trayNotifyOnUpdates">Show tray badge when updates exist</z-switch>
+          </div>
+
+          <z-divider zSpacing="sm" />
+
+          <div class="space-y-1.5">
+            <p class="text-sm font-medium">Default view</p>
+            <z-segmented
+              zSize="sm"
+              [zOptions]="defaultViewOptions"
+              formControlName="defaultView"
+              zAriaLabel="Default startup view"
+            />
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-1">
+            <button type="button" z-button zType="outline" zSize="sm" [zDisabled]="settingsStore.saving()" (click)="resetForm()">
+              Reset
+            </button>
+            <button type="submit" z-button zSize="sm" [zDisabled]="settingsStore.saving()">
+              {{ settingsStore.saving() ? 'Saving…' : 'Save settings' }}
+            </button>
+          </div>
+        </z-card>
+      </form>
+
+      @if (settingsStore.error()) {
+        <p class="text-sm text-destructive">{{ settingsStore.error() }}</p>
+      }
+    </section>
+  

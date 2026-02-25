@@ -1,0 +1,120 @@
+
+    @if (jobsStore.drawerOpen()) {
+      <section class="fixed bottom-3 left-3 right-3 z-50">
+        <z-card class="border-border/70 bg-card/95 shadow-2xl backdrop-blur ui-shell-enter">
+          <header class="space-y-2 px-1">
+            <div class="flex items-center justify-between gap-2">
+              <div class="space-y-1">
+                <p class="mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Brew Activity Log</p>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <z-badge zType="outline" zShape="pill" class="mono text-[10px] uppercase">
+                    running {{ jobsStore.runningCount() }}
+                  </z-badge>
+                  <z-badge zType="secondary" zShape="pill" class="mono text-[10px] uppercase">
+                    succeeded {{ jobsStore.succeededCount() }}
+                  </z-badge>
+                  <z-badge zType="outline" zShape="pill" class="mono text-[10px] uppercase text-destructive border-destructive/40">
+                    failed {{ jobsStore.failedCount() }}
+                  </z-badge>
+                </div>
+              </div>
+
+              <div class="flex gap-2">
+                <button type="button" z-button zType="ghost" zSize="sm" (click)="jobsStore.clearHistory()">Clear</button>
+                <button type="button" z-button zType="ghost" zSize="sm" (click)="jobsStore.closeDrawer()">Hide</button>
+              </div>
+            </div>
+
+            <div class="grid gap-1.5 lg:grid-cols-3">
+              <app-package-filter-chips
+                [selected]="jobsStore.statusFilter()"
+                [options]="statusFilterOptions()"
+                (selectedChange)="onStatusFilterChange($event)"
+              />
+              <app-package-filter-chips
+                [selected]="jobsStore.actionFilter()"
+                [options]="actionFilterOptions"
+                (selectedChange)="onActionFilterChange($event)"
+              />
+              <app-package-filter-chips
+                [selected]="jobsStore.kindFilter()"
+                [options]="kindFilterOptions"
+                (selectedChange)="onKindFilterChange($event)"
+              />
+            </div>
+
+            <app-package-search-input
+              [value]="jobsStore.query()"
+              placeholder="Search command, package, or output"
+              (valueChange)="jobsStore.setQuery($event)"
+            />
+          </header>
+
+          <z-divider zSpacing="sm" />
+
+          <div class="max-h-[22rem] overflow-y-auto px-1 pb-1">
+            @if (jobsStore.filteredJobs().length === 0) {
+              <p class="py-6 text-center text-xs text-muted-foreground">No jobs match the current filters.</p>
+            } @else {
+              <div class="stagger-list space-y-1.5">
+                @for (job of jobsStore.filteredJobs(); track job.jobId) {
+                  <article class="fade-up rounded-md border border-border/70 bg-muted/15 p-2 transition-colors duration-150 hover:bg-muted/25">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                      <div class="min-w-0">
+                        <p class="text-xs font-semibold">
+                          {{ actionLabel(job.action) }}
+                          @if (job.packageName) {
+                            <span class="text-muted-foreground">· {{ job.packageName }}</span>
+                          }
+                        </p>
+                        <p class="mono truncate text-[10px] text-muted-foreground">{{ job.command }}</p>
+                      </div>
+
+                      <div class="flex items-center gap-1.5">
+                        <z-badge zType="outline" zShape="pill" class="mono text-[10px] uppercase">{{ job.kind }}</z-badge>
+                        <z-badge [zType]="statusBadgeType(job.status)" zShape="pill" class="mono text-[10px] uppercase">
+                          {{ job.status }}
+                        </z-badge>
+                      </div>
+                    </div>
+
+                    <div class="mt-2 grid gap-1 text-[11px] text-muted-foreground sm:grid-cols-3">
+                      <p>Queued: {{ formatTimestamp(job.queuedAt) }}</p>
+                      <p>Running: {{ formatTimestamp(job.runningAt) }}</p>
+                      <p>Completed: {{ formatTimestamp(job.completedAt) }}</p>
+                    </div>
+
+                    <div class="mt-1.5 flex flex-wrap items-center gap-3 mono text-[10px] text-muted-foreground">
+                      <span>exit {{ job.exitCode ?? '—' }}</span>
+                      <span>duration {{ formatDuration(job.durationMs) }}</span>
+                      <span>lines {{ job.outputLines.length }}</span>
+                    </div>
+
+                    @if (job.error) {
+                      <p class="mt-1.5 text-xs text-destructive">{{ job.error }}</p>
+                    }
+
+                    @if (job.outputLines.length > 0) {
+                      <details class="mt-1.5 rounded-md border border-border/70 bg-card/80">
+                        <summary class="cursor-pointer px-2 py-1 text-xs font-medium text-muted-foreground">
+                          Output ({{ job.outputLines.length }})
+                        </summary>
+                        <div class="max-h-40 space-y-0.5 overflow-y-auto px-2 pb-2">
+                          @for (line of job.outputLines; track $index) {
+                            <p class="mono text-[11px]" [class.text-destructive]="line.stream === 'stderr'" [class.text-muted-foreground]="line.stream !== 'stderr'">
+                              <span class="text-[10px] uppercase opacity-70">{{ line.stream }}</span>
+                              · {{ line.text }}
+                            </p>
+                          }
+                        </div>
+                      </details>
+                    }
+                  </article>
+                }
+              </div>
+            }
+          </div>
+        </z-card>
+      </section>
+    }
+  

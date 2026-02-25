@@ -1,0 +1,24 @@
+
+    <div [class]="classes()">
+      <z-calendar-navigation
+        [currentMonth]="currentMonthValue()"
+        [currentYear]="currentYearValue()"
+        [minDate]="minDate()"
+        [maxDate]="maxDate()"
+        [disabled]="disabled()"
+        (monthChange)="onMonthChange($event)"
+        (yearChange)="onYearChange($event)"
+        (previousMonth)="previousMonth()"
+        (nextMonth)="nextMonth()"
+      />
+
+      <z-calendar-grid
+        [calendarDays]="calendarDays()"
+        [disabled]="disabled()"
+        (dateSelect)="onDateSelect($event)"
+        (previousMonth)="onGridPreviousMonth($event)"
+        (nextMonth)="onGridNextMonth($event)"
+        (navigateYear)="onNavigateYear($event)"
+      />
+    </div>
+  

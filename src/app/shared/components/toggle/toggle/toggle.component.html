@@ -1,0 +1,13 @@
+
+    <button
+      type="button"
+      [attr.aria-label]="zAriaLabel()"
+      [attr.aria-pressed]="value()"
+      [attr.data-state]="value() ? 'on' : 'off'"
+      [class]="classes()"
+      [disabled]="disabled()"
+      (click)="toggle()"
+    >
+      <ng-content />
+    </button>
+  

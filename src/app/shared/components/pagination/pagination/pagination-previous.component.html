@@ -1,0 +1,12 @@
+<button
+  type="button"
+  z-pagination-button
+  [attr.disabled]="zDisabled() ? '' : null"
+  [class]="classes()"
+  [zSize]="zSize()"
+  [zDisabled]="zDisabled()"
+>
+  <span class="sr-only">To previous page</span>
+  <z-icon zType="chevron-left" aria-hidden="true" />
+  <span class="hidden sm:block" aria-hidden="true">Previous</span>
+</button>

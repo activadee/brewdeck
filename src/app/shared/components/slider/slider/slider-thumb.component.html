@@ -1,0 +1,11 @@
+<span
+  #thumb
+  data-slot="slider-thumb"
+  [attr.role]="'slider'"
+  [attr.aria-valuemin]="min()"
+  [attr.aria-valuemax]="max()"
+  [attr.aria-valuenow]="value()"
+  [attr.aria-disabled]="disabled() ? true : null"
+  [class]="classes()"
+  tabindex="0"
+></span>

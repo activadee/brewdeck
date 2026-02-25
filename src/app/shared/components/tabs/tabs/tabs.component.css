@@ -1,0 +1,17 @@
+
+    .nav-tab-scroll {
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+      &::-webkit-scrollbar-thumb {
+        background-color: rgba(209, 209, 209, 0.2);
+        border-radius: 2px;
+      }
+      &::-webkit-scrollbar {
+        height: 4px;
+        width: 4px;
+      }
+      &::-webkit-scrollbar-button {
+        display: none;
+      }
+    }
+  

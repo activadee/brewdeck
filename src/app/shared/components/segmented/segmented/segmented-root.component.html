@@ -1,0 +1,31 @@
+<div [class]="classes()" role="tablist" [attr.aria-label]="zAriaLabel()">
+  @for (option of zOptions(); track option.value) {
+    <button
+      type="button"
+      role="tab"
+      [class]="getItemClasses(option.value)"
+      [disabled]="option.disabled || zDisabled()"
+      [attr.aria-selected]="isSelected(option.value)"
+      [attr.aria-controls]="option.value + '-panel'"
+      [attr.id]="option.value + '-tab'"
+      (click)="selectOption(option.value)"
+    >
+      {{ option.label }}
+    </button>
+  } @empty {
+    @for (item of items(); track item.value()) {
+      <button
+        type="button"
+        role="tab"
+        [class]="getItemClasses(item.value())"
+        [disabled]="item.disabled() || zDisabled()"
+        [attr.aria-selected]="isSelected(item.value())"
+        [attr.aria-controls]="item.value() + '-panel'"
+        [attr.id]="item.value() + '-tab'"
+        (click)="selectOption(item.value())"
+      >
+        {{ item.label() }}
+      </button>
+    }
+  }
+</div>

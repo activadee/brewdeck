@@ -1,0 +1,27 @@
+
+    <span class="flex items-center space-x-2" zardId="switch" #z="zardId">
+      <button
+        [id]="zId() || z.id()"
+        type="button"
+        role="switch"
+        [attr.data-state]="status()"
+        [attr.aria-checked]="zChecked()"
+        [class]="classes()"
+        [disabled]="zDisabled() || formDisabled()"
+        (click)="onSwitchChange()"
+      >
+        <span
+          [attr.data-size]="zSize()"
+          [attr.data-state]="status()"
+          class="bg-background pointer-events-none block h-5 w-5 rounded-full shadow-lg ring-0 transition-transform data-[size=lg]:h-6 data-[size=lg]:w-6 data-[size=sm]:h-4 data-[size=sm]:w-4 data-[state=checked]:translate-x-5 data-[size=lg]:data-[state=checked]:translate-x-6 data-[size=sm]:data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0 data-[size=lg]:data-[state=unchecked]:translate-x-0 data-[size=sm]:data-[state=unchecked]:translate-x-0"
+        ></span>
+      </button>
+
+      <label
+        class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+        [for]="zId() || z.id()"
+      >
+        <ng-content><span class="sr-only">toggle switch</span></ng-content>
+      </label>
+    </span>
+  

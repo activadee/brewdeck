@@ -4,7 +4,7 @@ import { EventEmitter, Inject, PLATFORM_ID } from '@angular/core';
 
 import { filter, fromEvent, Subject, takeUntil } from 'rxjs';
 
-import type { ZardSheetComponent, ZardSheetOptions } from './sheet.component';
+import type { ZardSheetComponent, ZardSheetOptions } from './sheet/sheet.component';
 
 const enum eTriggerAction {
   CANCEL = 'cancel',

@@ -1,0 +1,12 @@
+<button
+  type="button"
+  z-pagination-button
+  [attr.disabled]="zDisabled() ? '' : null"
+  [class]="classes()"
+  [zDisabled]="zDisabled()"
+  [zSize]="zSize()"
+>
+  <span class="sr-only">To next page</span>
+  <span class="hidden sm:block" aria-hidden="true">Next</span>
+  <z-icon zType="chevron-right" aria-hidden="true" />
+</button>

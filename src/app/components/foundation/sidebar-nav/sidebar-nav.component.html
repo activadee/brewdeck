@@ -1,0 +1,23 @@
+
+    <z-sidebar class="brew-sidebar-surface" [zCollapsible]="false">
+      <z-sidebar-group>
+        <nav class="mt-0 flex flex-col gap-1">
+          @for (item of navItems; track item.route) {
+            <a
+              [routerLink]="item.route"
+              routerLinkActive="brew-nav-active"
+              z-button
+              zType="ghost"
+              zSize="sm"
+              class="brew-nav-link"
+            >
+              <span>{{ item.label }}</span>
+              @if (item.route === '/updates' && updateCount() > 0) {
+                <z-badge zType="secondary" zShape="pill">{{ updateCount() }}</z-badge>
+              }
+            </a>
+          }
+        </nav>
+      </z-sidebar-group>
+    </z-sidebar>
+  

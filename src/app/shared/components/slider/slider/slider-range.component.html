@@ -1,0 +1,9 @@
+<span
+  data-slot="slider-range"
+  [attr.data-orientation]="orientation()"
+  [class]="classes()"
+  [style.left]="orientation() === 'horizontal' ? '0' : null"
+  [style.right]="orientation() === 'horizontal' ? 100 - percent() + '%' : null"
+  [style.bottom]="orientation() === 'vertical' ? '0' : null"
+  [style.top]="orientation() === 'vertical' ? 100 - percent() + '%' : null"
+></span>

@@ -1,12 +1,12 @@
-import { ContentComponent } from '@/shared/components/layout/content.component';
-import { FooterComponent } from '@/shared/components/layout/footer.component';
-import { HeaderComponent } from '@/shared/components/layout/header.component';
-import { LayoutComponent } from '@/shared/components/layout/layout.component';
+import { ContentComponent } from './content/content.component';
+import { FooterComponent } from './footer/footer.component';
+import { HeaderComponent } from './header/header.component';
+import { LayoutComponent } from './layout/layout.component';
 import {
   SidebarComponent,
   SidebarGroupComponent,
   SidebarGroupLabelComponent,
-} from '@/shared/components/layout/sidebar.component';
+} from './sidebar/sidebar.component';
 
 export const LayoutImports = [
   LayoutComponent,

@@ -1,0 +1,79 @@
+
+    <div
+      class="flex items-center"
+      [style.padding-left.px]="level() * 24"
+      [attr.data-state]="isExpanded() ? 'open' : 'closed'"
+    >
+      <!-- Toggle -->
+      @if (node().children?.length && !node().leaf) {
+        <button
+          type="button"
+          [class]="toggleClasses()"
+          [attr.aria-label]="isExpanded() ? 'Collapse ' + node().label : 'Expand ' + node().label"
+          [attr.tabindex]="-1"
+          (click)="onToggle($event)"
+        >
+          <z-icon zType="chevron-right" class="size-4" />
+        </button>
+      } @else {
+        <span class="inline-flex size-4 shrink-0"></span>
+      }
+
+      <!-- Checkbox -->
+      @if (checkable()) {
+        <span class="mr-0.5 ml-1.5">
+          <z-checkbox
+            [ngModel]="checkState() === 'checked'"
+            [zDisabled]="node().disabled ?? false"
+            [attr.aria-checked]="checkState() === 'indeterminate' ? 'mixed' : checkState() === 'checked'"
+            (checkChange)="onCheckChange()"
+          />
+        </span>
+      }
+
+      <!-- Content -->
+      <div
+        [class]="contentClasses()"
+        [attr.data-selected]="isSelected() || null"
+        [attr.tabindex]="node().disabled ? -1 : 0"
+        role="treeitem"
+        [attr.aria-selected]="isSelected()"
+        (click)="onContentClick()"
+        (keydown.enter.stop)="onContentClick()"
+      >
+        @if (nodeTemplate(); as tmpl) {
+          <ng-container [ngTemplateOutlet]="tmpl" [ngTemplateOutletContext]="{ $implicit: node(), level: level() }" />
+        } @else {
+          @if (node().icon) {
+            <z-icon [zType]="$any(node().icon)" class="size-4 shrink-0" />
+          }
+          <span class="truncate">{{ node().label }}</span>
+        }
+      </div>
+    </div>
+
+    <!-- Children (animated collapse) — skip in flat/virtual-scroll mode -->
+    @if (!flat() && node().children?.length && !node().leaf) {
+      <div role="group" [class]="childrenClasses()">
+        <div class="overflow-hidden">
+          @for (child of node().children; track child.key; let i = $index) {
+            <z-tree-node
+              [node]="child"
+              [level]="level() + 1"
+              [selectable]="selectable()"
+              [checkable]="checkable()"
+              [nodeTemplate]="nodeTemplate()"
+              role="treeitem"
+              [attr.aria-expanded]="child.children?.length ? treeService.isExpanded(child.key) : null"
+              [attr.aria-level]="level() + 2"
+              [attr.aria-setsize]="node().children!.length"
+              [attr.aria-posinset]="i + 1"
+              [attr.aria-selected]="selectable() ? treeService.isSelected(child.key) : null"
+              [attr.aria-disabled]="child.disabled || null"
+              [attr.data-key]="child.key"
+            />
+          }
+        </div>
+      </div>
+    }
+  

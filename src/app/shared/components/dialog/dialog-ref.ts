@@ -4,7 +4,7 @@ import { EventEmitter, Inject, PLATFORM_ID } from '@angular/core';
 
 import { filter, fromEvent, Subject, takeUntil } from 'rxjs';
 
-import type { ZardDialogComponent, ZardDialogOptions } from './dialog.component';
+import type { ZardDialogComponent, ZardDialogOptions } from './dialog/dialog.component';
 
 const enum eTriggerAction {
   CANCEL = 'cancel',

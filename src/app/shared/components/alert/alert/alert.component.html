@@ -1,0 +1,23 @@
+
+    @if (zIcon() || iconName()) {
+      <span [class]="iconClasses()" data-slot="alert-icon">
+        <ng-container *zStringTemplateOutlet="zIcon()">
+          <z-icon [zType]="iconName()!" />
+        </ng-container>
+      </span>
+    }
+
+    <div class="flex-1">
+      @if (zTitle()) {
+        <div [class]="titleClasses()" data-slot="alert-title">
+          <ng-container *zStringTemplateOutlet="zTitle()">{{ zTitle() }}</ng-container>
+        </div>
+      }
+
+      @if (zDescription()) {
+        <div [class]="descriptionClasses()" data-slot="alert-description">
+          <ng-container *zStringTemplateOutlet="zDescription()">{{ zDescription() }}</ng-container>
+        </div>
+      }
+    </div>
+  

@@ -1,0 +1,28 @@
+<ng-template #itemContent><ng-content /></ng-template>
+
+<li [class]="classes()">
+  @if (isEllipsis()) {
+    <ng-container *zStringTemplateOutlet="itemContent" />
+  } @else {
+    <a
+      class="flex items-center gap-1.5"
+      [routerLink]="routerLink()"
+      [queryParams]="queryParams()"
+      [fragment]="fragment()"
+    >
+      <ng-container *zStringTemplateOutlet="itemContent" />
+    </a>
+  }
+</li>
+
+@if (!isLast()) {
+  <li aria-hidden="true" role="presentation" [class]="separatorClasses()" (click)="$event.stopPropagation()">
+    @if (isTemplate(separator())) {
+      <ng-container *zStringTemplateOutlet="separator()" />
+    } @else if (separator()) {
+      {{ separator() }}
+    } @else {
+      <z-icon zType="chevron-right" />
+    }
+  </li>
+}

@@ -6,5 +6,5 @@ export * from '@/shared/components/menu/menu.directive';
 export * from '@/shared/components/menu/menu.variants';
 export * from '@/shared/components/menu/menu.imports';
 export * from '@/shared/components/menu/menu-positions';
-export * from '@/shared/components/menu/menu-shortcut.component';
-export * from '@/shared/components/menu/menu-label.component';
+export * from './menu-shortcut/menu-shortcut.component';
+export * from './menu-label/menu-label.component';

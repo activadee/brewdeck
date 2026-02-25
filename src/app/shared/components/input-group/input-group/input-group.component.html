@@ -1,0 +1,25 @@
+
+    <ng-container zardId="input-group" #z="zardId">
+      @let addonBefore = zAddonBefore();
+      @if (addonBefore) {
+        <div [class]="addonBeforeClasses()" [id]="addonBeforeId()" [attr.aria-disabled]="zDisabled() || zLoading()">
+          <ng-container *zStringTemplateOutlet="addonBefore">{{ addonBefore }}</ng-container>
+        </div>
+      }
+
+      <div [class]="inputWrapperClasses()">
+        <ng-content select="input[z-input], textarea[z-input]" />
+
+        @if (zLoading()) {
+          <z-loader zSize="sm" />
+        }
+      </div>
+
+      @let addonAfter = zAddonAfter();
+      @if (addonAfter) {
+        <div [class]="addonAfterClasses()" [id]="addonAfterId()" [attr.aria-disabled]="zDisabled() || zLoading()">
+          <ng-container *zStringTemplateOutlet="addonAfter">{{ addonAfter }}</ng-container>
+        </div>
+      }
+    </ng-container>
+  

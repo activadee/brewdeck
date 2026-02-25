@@ -1,0 +1,12 @@
+
+    <button
+      type="button"
+      z-button
+      zSize="sm"
+      [zType]="variant() === 'primary' ? 'default' : 'outline'"
+      [zDisabled]="disabled()"
+      (click)="pressed.emit()"
+    >
+      {{ label() }}
+    </button>
+  

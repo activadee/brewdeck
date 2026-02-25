@@ -1,13 +1,13 @@
 import { Routes } from '@angular/router';
 
-import { BrowseCatalogViewComponent } from './features/browse/browse-catalog-view.component';
-import { CleanupViewComponent } from './features/cleanup/cleanup-view.component';
-import { InstalledPackagesViewComponent } from './features/installed/installed-packages-view.component';
-import { SettingsViewComponent } from './features/settings/settings-view.component';
-import { TapsViewComponent } from './features/taps/taps-view.component';
-import { TrayPopoverComponent } from './features/tray/tray-popover.component';
-import { UpdatesViewComponent } from './features/updates/updates-view.component';
-import { AppShellComponent } from './layout/app-shell.component';
+import { BrowseCatalogViewComponent } from './features/browse/browse-catalog-view/browse-catalog-view.component';
+import { InstalledPackagesViewComponent } from './features/installed/installed-packages-view/installed-packages-view.component';
+import { SettingsViewComponent } from './features/settings/settings-view/settings-view.component';
+import { TapsViewComponent } from './features/taps/taps-view/taps-view.component';
+import { TrayPopoverComponent } from './features/tray/tray-popover/tray-popover.component';
+import { UpdatesViewComponent } from './features/updates/updates-view/updates-view.component';
+import { AppShellComponent } from './layout/app-shell/app-shell.component';
+import { CleanupViewComponent } from './features/cleanup/cleanup-view/cleanup-view.component';
 
 export const routes: Routes = [
   {

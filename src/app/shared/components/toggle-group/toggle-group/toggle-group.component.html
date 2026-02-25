@@ -1,0 +1,24 @@
+
+    <div [class]="classes()" role="group" [attr.data-orientation]="'horizontal'">
+      @for (item of items(); track item.value; let i = $index) {
+        <button
+          type="button"
+          [attr.aria-pressed]="isItemPressed(item.value)"
+          [attr.data-state]="isItemPressed(item.value) ? 'on' : 'off'"
+          [attr.aria-label]="item.ariaLabel"
+          [class]="getItemClasses(i, items().length)"
+          [disabled]="disabled() || item.disabled"
+          (click)="toggleItem(item)"
+        >
+          @if (item.icon) {
+            <span z-icon [zType]="item.icon" class="h-4 w-4 shrink-0"></span>
+          }
+          @if (item.label) {
+            <span>{{ item.label }}</span>
+          } @else if (!item.icon) {
+            <span>{{ item.value }}</span>
+          }
+        </button>
+      }
+    </div>
+  

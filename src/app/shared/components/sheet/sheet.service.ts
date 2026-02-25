@@ -4,7 +4,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { inject, Injectable, InjectionToken, Injector, PLATFORM_ID, TemplateRef } from '@angular/core';
 
 import { ZardSheetRef } from './sheet-ref';
-import { ZardSheetComponent, ZardSheetOptions } from './sheet.component';
+import { ZardSheetComponent, ZardSheetOptions } from './sheet/sheet.component';
 
 type ContentType<T> = ComponentType<T> | TemplateRef<T> | string;
 export const Z_SHEET_DATA = new InjectionToken<any>('Z_SHEET_DATA');

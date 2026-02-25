@@ -1,0 +1,25 @@
+import { ChangeDetectionStrategy, Component, computed, input, ViewEncapsulation } from '@angular/core';
+
+import { type ClassValue } from 'clsx';
+
+import { mergeClasses } from '@/shared/utils/merge-classes';
+
+import { kbdGroupVariants } from '../kbd.variants';
+
+@Component({
+  selector: 'z-kbd-group, [z-kbd-group]',
+  standalone: true,
+  templateUrl: './kbd-group.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  encapsulation: ViewEncapsulation.None,
+  host: {
+    '[class]': 'classes()',
+  },
+  exportAs: 'zKbdGroup',
+  styleUrl: './kbd-group.component.css',
+})
+export class ZardKbdGroupComponent {
+  readonly class = input<ClassValue>('');
+
+  protected readonly classes = computed(() => mergeClasses(kbdGroupVariants(), this.class()));
+}
