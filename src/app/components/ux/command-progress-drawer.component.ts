@@ -157,6 +157,7 @@ export class CommandProgressDrawerComponent {
     { value: 'reinstall', label: 'Reinstall' },
     { value: 'upgradeOne', label: 'Upgrade one' },
     { value: 'upgradeAll', label: 'Upgrade all' },
+    { value: 'cleanup', label: 'Cleanup' },
     { value: 'pin', label: 'Pin' },
     { value: 'unpin', label: 'Unpin' },
     { value: 'tapAdd', label: 'Tap add' },
@@ -195,6 +196,8 @@ export class CommandProgressDrawerComponent {
         return 'Upgrade package';
       case 'upgradeAll':
         return 'Upgrade all';
+      case 'cleanup':
+        return 'Cleanup';
       case 'pin':
         return 'Pin formula';
       case 'unpin':

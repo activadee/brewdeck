@@ -4,6 +4,7 @@ import {
   brewJobCompleteEventSchema,
   brewJobFailedEventSchema,
   brewJobProgressEventSchema,
+  cleanupPreviewResultSchema,
   packageDetailsRequestSchema,
   packageDetailsSchema,
   tapAddRequestSchema,
@@ -120,6 +121,27 @@ describe('window chrome contracts', () => {
     expect(removeValid.success).toBe(true);
   });
 
+  it('parses cleanup preview payloads', () => {
+    const parsed = cleanupPreviewResultSchema.parse({
+      command: 'brew cleanup --dry-run',
+      items: [
+        {
+          path: '/opt/homebrew/Cellar/foo/1.0',
+          sizeBytes: 237,
+          fileCount: null,
+          metadata: '237B'
+        }
+      ],
+      totalBytes: 237,
+      rawOutput: 'Would remove: /opt/homebrew/Cellar/foo/1.0 (237B)',
+      generatedAt: '2026-02-25T00:00:00.000Z'
+    });
+
+    expect(parsed.command).toBe('brew cleanup --dry-run');
+    expect(parsed.items[0]?.sizeBytes).toBe(237);
+    expect(parsed.totalBytes).toBe(237);
+  });
+
   it('parses structured job progress payloads', () => {
     const parsed = brewJobProgressEventSchema.parse({
       jobId: 'job-1',
@@ -209,5 +231,21 @@ describe('window chrome contracts', () => {
 
     expect(tapAdd.success).toBe(true);
     expect(tapRemove.success).toBe(true);
+  });
+
+  it('accepts cleanup job actions', () => {
+    const cleanup = brewJobProgressEventSchema.safeParse({
+      jobId: 'job-3',
+      action: 'cleanup',
+      command: 'brew cleanup',
+      stage: 'queued',
+      stream: 'system',
+      message: 'Queued cleanup operation',
+      packageName: null,
+      kind: 'system',
+      timestamp: '2026-02-25T00:00:00.000Z'
+    });
+
+    expect(cleanup.success).toBe(true);
   });
 });

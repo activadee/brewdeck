@@ -12,6 +12,7 @@ import {
   type BrewJobKind,
   type BrewJobProgressEvent,
   type BrewTap,
+  type CleanupPreviewResult,
   type CheckNowResult,
   type InstallOneRequest,
   type PackageDetails,
@@ -77,6 +78,15 @@ const createFallbackBridge = (): BrewGuiBridge => ({
   },
   async getTaps(): Promise<BrewTap[]> {
     return [];
+  },
+  async getCleanupPreview(): Promise<CleanupPreviewResult> {
+    return {
+      command: 'brew cleanup --dry-run',
+      items: [],
+      totalBytes: null,
+      rawOutput: 'Electron bridge unavailable',
+      generatedAt: new Date().toISOString()
+    };
   },
   async getPackageDetails(_request: PackageDetailsRequest): Promise<PackageDetails> {
     return {
@@ -173,6 +183,14 @@ const createFallbackBridge = (): BrewGuiBridge => ({
       command: `brew untap ${_request.name}`,
       kind: 'system',
       packageName: _request.name
+    });
+  },
+  async runCleanup(): Promise<BrewJobCompleteEvent> {
+    return createFallbackJobCompleteEvent({
+      action: 'cleanup',
+      command: 'brew cleanup',
+      kind: 'system',
+      packageName: null
     });
   },
   async upgradeOne(_request: UpgradeOneRequest): Promise<BrewJobCompleteEvent> {

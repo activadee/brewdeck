@@ -859,6 +859,127 @@ describe('HomebrewService.tapRemove', () => {
   });
 });
 
+describe('HomebrewService.getCleanupPreview', () => {
+  it('parses dry-run entries with size and files metadata', async () => {
+    const service = new HomebrewService() as any;
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+    const runText = vi.fn(async () => ({
+      stdout: [
+        'Would remove: /opt/homebrew/Cellar/foo/1.0 (237B)',
+        'Would remove: /opt/homebrew/Library/Homebrew/vendor/portable-ruby/3.4.7 (1,585 files, 35.6MB)',
+        '==> This operation would free approximately 35.6MB of disk space.'
+      ].join('\n'),
+      stderr: '',
+      exitCode: 0
+    }));
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    const result = await service.getCleanupPreview();
+
+    expect(runText).toHaveBeenCalledWith(['cleanup', '--dry-run'], expect.any(Object));
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(enqueue.mock.calls[0]?.[1]).toBe(10 * 60 * 1000);
+    expect(result.command).toBe('brew cleanup --dry-run');
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0]).toMatchObject({
+      path: '/opt/homebrew/Cellar/foo/1.0',
+      sizeBytes: 237,
+      fileCount: null
+    });
+    expect(result.items[1]).toMatchObject({
+      fileCount: 1585
+    });
+    expect(result.totalBytes).toBe(37329306);
+  });
+
+  it('sets totalBytes to zero for explicit nothing-to-do output', async () => {
+    const service = new HomebrewService() as any;
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+    const runText = vi.fn(async () => ({
+      stdout: 'Nothing to do.\n',
+      stderr: '',
+      exitCode: 0
+    }));
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    const result = await service.getCleanupPreview();
+
+    expect(result.items).toHaveLength(0);
+    expect(result.totalBytes).toBe(0);
+  });
+});
+
+describe('HomebrewService.runCleanup', () => {
+  it('enqueues cleanup jobs with cleanup timeout and action metadata', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => ({ stdout: 'clean', stderr: '', exitCode: 0 }));
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+    const onProgress = vi.fn();
+    const onComplete = vi.fn();
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    const result = await service.runCleanup({
+      onProgress,
+      onComplete,
+      onFailed: () => undefined
+    });
+
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(enqueue.mock.calls[0]?.[1]).toBe(30 * 60 * 1000);
+    expect(onProgress.mock.calls[0]?.[0].action).toBe('cleanup');
+    expect(result.action).toBe('cleanup');
+    expect(result.command).toBe('brew cleanup');
+    expect(result.kind).toBe('system');
+  });
+
+  it('emits structured failed events when cleanup command fails', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => {
+      throw new BrewCommandError('brew cleanup failed', {
+        command: ['cleanup'],
+        exitCode: 1,
+        stdout: '',
+        stderr: 'Error: cleanup failed'
+      });
+    });
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+    const onFailed = vi.fn();
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    await expect(
+      service.runCleanup({
+        onProgress: () => undefined,
+        onComplete: () => undefined,
+        onFailed
+      })
+    ).rejects.toThrow();
+
+    expect(onFailed).toHaveBeenCalledTimes(1);
+    expect(onFailed.mock.calls[0]?.[0]).toMatchObject({
+      action: 'cleanup',
+      kind: 'system',
+      command: 'brew cleanup',
+      exitCode: 1
+    });
+  });
+});
+
 describe('HomebrewService.upgradeAll', () => {
   it('invalidates all package details cache entries after upgrade-all', async () => {
     const service = new HomebrewService() as any;

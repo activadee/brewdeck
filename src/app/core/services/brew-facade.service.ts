@@ -8,6 +8,7 @@ import type {
   BrewJobFailedEvent,
   BrewJobProgressEvent,
   BrewTap,
+  CleanupPreviewResult,
   CheckNowResult,
   InstallOneRequest,
   InstalledPackage,
@@ -65,6 +66,10 @@ export class BrewFacadeService {
     return this.bridge.api.getTaps();
   }
 
+  getCleanupPreview(): Promise<CleanupPreviewResult> {
+    return this.bridge.api.getCleanupPreview();
+  }
+
   getPackageDetails(request: PackageDetailsRequest): Promise<PackageDetails> {
     return this.bridge.api.getPackageDetails(request);
   }
@@ -99,6 +104,10 @@ export class BrewFacadeService {
 
   tapRemove(request: TapRemoveRequest): Promise<BrewJobCompleteEvent> {
     return this.bridge.api.tapRemove(request);
+  }
+
+  runCleanup(): Promise<BrewJobCompleteEvent> {
+    return this.bridge.api.runCleanup();
   }
 
   upgradeOne(request: UpgradeOneRequest): Promise<BrewJobCompleteEvent> {
