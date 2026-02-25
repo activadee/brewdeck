@@ -6,6 +6,9 @@ import {
   brewJobProgressEventSchema,
   packageDetailsRequestSchema,
   packageDetailsSchema,
+  tapAddRequestSchema,
+  tapRemoveRequestSchema,
+  brewTapSchema,
   windowChromeStateSchema,
   windowControlActionSchema,
   type WindowChromeState
@@ -89,6 +92,34 @@ describe('window chrome contracts', () => {
     expect(parsed.success).toBe(false);
   });
 
+  it('parses tap payloads and validates tap request names', () => {
+    const tap = brewTapSchema.parse({
+      name: 'sst/tap',
+      official: false,
+      protected: false,
+      userTapped: true,
+      path: '/opt/homebrew/Library/Taps/sst/homebrew-tap',
+      remote: 'https://github.com/sst/homebrew-tap',
+      branch: 'main',
+      upstream: 'origin/main',
+      ahead: 0,
+      behind: 2,
+      dirty: false,
+      syncState: 'behind',
+      health: 'attention',
+      lastCheckedAt: '2026-02-25T00:00:00.000Z',
+      warning: null
+    });
+    const addValid = tapAddRequestSchema.safeParse({ name: 'sst/tap' });
+    const addInvalid = tapAddRequestSchema.safeParse({ name: 'not-a-tap' });
+    const removeValid = tapRemoveRequestSchema.safeParse({ name: 'steipete/tap' });
+
+    expect(tap.name).toBe('sst/tap');
+    expect(addValid.success).toBe(true);
+    expect(addInvalid.success).toBe(false);
+    expect(removeValid.success).toBe(true);
+  });
+
   it('parses structured job progress payloads', () => {
     const parsed = brewJobProgressEventSchema.parse({
       jobId: 'job-1',
@@ -150,5 +181,33 @@ describe('window chrome contracts', () => {
 
     expect(completed.kind).toBe('system');
     expect(failed.exitCode).toBe(1);
+  });
+
+  it('accepts tap job actions', () => {
+    const tapAdd = brewJobProgressEventSchema.safeParse({
+      jobId: 'job-1',
+      action: 'tapAdd',
+      command: 'brew tap sst/tap',
+      stage: 'running',
+      stream: 'system',
+      message: 'Adding tap sst/tap',
+      packageName: 'sst/tap',
+      kind: 'system',
+      timestamp: '2026-02-25T00:00:00.000Z'
+    });
+    const tapRemove = brewJobProgressEventSchema.safeParse({
+      jobId: 'job-2',
+      action: 'tapRemove',
+      command: 'brew untap sst/tap',
+      stage: 'queued',
+      stream: 'system',
+      message: 'Queued tap removal',
+      packageName: 'sst/tap',
+      kind: 'system',
+      timestamp: '2026-02-25T00:00:00.000Z'
+    });
+
+    expect(tapAdd.success).toBe(true);
+    expect(tapRemove.success).toBe(true);
   });
 });

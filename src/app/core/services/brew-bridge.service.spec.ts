@@ -20,6 +20,15 @@ describe('BrewBridgeService fallback bridge', () => {
 
       await expect(service.api.windowControl('close')).resolves.toBeUndefined();
       await expect(service.api.getWindowChromeState()).resolves.toEqual(DEFAULT_WINDOW_CHROME_STATE);
+      await expect(service.api.getTaps()).resolves.toEqual([]);
+      await expect(service.api.tapAdd({ name: 'sst/tap' })).resolves.toMatchObject({
+        success: false,
+        action: 'tapAdd'
+      });
+      await expect(service.api.tapRemove({ name: 'sst/tap' })).resolves.toMatchObject({
+        success: false,
+        action: 'tapRemove'
+      });
     } finally {
       window.brewGui = originalBridge;
     }

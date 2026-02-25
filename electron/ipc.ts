@@ -5,6 +5,8 @@ import {
   packageDetailsRequestSchema,
   pinOneRequestSchema,
   reinstallOneRequestSchema,
+  tapAddRequestSchema,
+  tapRemoveRequestSchema,
   unpinOneRequestSchema,
   uninstallOneRequestSchema,
   appSettingsUpdateSchema,
@@ -75,6 +77,7 @@ export function registerIpcHandlers(options: RegisterIpcOptions): void {
   ipcMain.handle(IPC_CHANNELS.GET_BREW_AVAILABILITY, async () => homebrew.getBrewAvailability());
   ipcMain.handle(IPC_CHANNELS.GET_INSTALLED, async () => homebrew.getInstalled());
   ipcMain.handle(IPC_CHANNELS.GET_OUTDATED, async () => homebrew.getOutdated());
+  ipcMain.handle(IPC_CHANNELS.GET_TAPS, async () => homebrew.getTaps());
   ipcMain.handle(IPC_CHANNELS.GET_PACKAGE_DETAILS, async (_event, payload) => {
     const parsed = packageDetailsRequestSchema.parse(payload);
     return homebrew.getPackageDetails(parsed);
@@ -129,6 +132,26 @@ export function registerIpcHandlers(options: RegisterIpcOptions): void {
     const parsed = unpinOneRequestSchema.parse(payload);
 
     return homebrew.unpinOne(parsed, {
+      onProgress: emitJobProgress,
+      onComplete: emitJobComplete,
+      onFailed: emitJobFailed
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS.TAP_ADD, async (_event, payload) => {
+    const parsed = tapAddRequestSchema.parse(payload);
+
+    return homebrew.tapAdd(parsed, {
+      onProgress: emitJobProgress,
+      onComplete: emitJobComplete,
+      onFailed: emitJobFailed
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS.TAP_REMOVE, async (_event, payload) => {
+    const parsed = tapRemoveRequestSchema.parse(payload);
+
+    return homebrew.tapRemove(parsed, {
       onProgress: emitJobProgress,
       onComplete: emitJobComplete,
       onFailed: emitJobFailed

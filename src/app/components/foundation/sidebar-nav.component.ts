@@ -50,6 +50,7 @@ export class SidebarNavComponent {
     { label: 'Updates', route: '/updates' },
     { label: 'Installed', route: '/installed' },
     { label: 'Browse', route: '/browse' },
+    { label: 'Taps', route: '/taps' },
     { label: 'Settings', route: '/settings' }
   ];
 }

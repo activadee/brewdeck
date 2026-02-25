@@ -7,6 +7,7 @@ import type {
   BrewJobCompleteEvent,
   BrewJobFailedEvent,
   BrewJobProgressEvent,
+  BrewTap,
   CheckNowResult,
   InstallOneRequest,
   InstalledPackage,
@@ -18,6 +19,8 @@ import type {
   SearchCatalogRequest,
   SearchCatalogResponse,
   SyncMetadataResult,
+  TapAddRequest,
+  TapRemoveRequest,
   UnpinOneRequest,
   UninstallOneRequest,
   UpdatesChangedEvent,
@@ -58,6 +61,10 @@ export class BrewFacadeService {
     return this.bridge.api.getOutdated();
   }
 
+  getTaps(): Promise<BrewTap[]> {
+    return this.bridge.api.getTaps();
+  }
+
   getPackageDetails(request: PackageDetailsRequest): Promise<PackageDetails> {
     return this.bridge.api.getPackageDetails(request);
   }
@@ -84,6 +91,14 @@ export class BrewFacadeService {
 
   unpinOne(request: UnpinOneRequest): Promise<BrewJobCompleteEvent> {
     return this.bridge.api.unpinOne(request);
+  }
+
+  tapAdd(request: TapAddRequest): Promise<BrewJobCompleteEvent> {
+    return this.bridge.api.tapAdd(request);
+  }
+
+  tapRemove(request: TapRemoveRequest): Promise<BrewJobCompleteEvent> {
+    return this.bridge.api.tapRemove(request);
   }
 
   upgradeOne(request: UpgradeOneRequest): Promise<BrewJobCompleteEvent> {

@@ -59,7 +59,17 @@ describe('AppShellComponent titlebar', () => {
       failedCount: signal(0),
       statusFilter: signal<'all' | 'running' | 'succeeded' | 'failed'>('all'),
       actionFilter: signal<
-        'all' | 'install' | 'uninstall' | 'reinstall' | 'upgradeOne' | 'upgradeAll' | 'pin' | 'unpin' | 'syncMetadata'
+        | 'all'
+        | 'install'
+        | 'uninstall'
+        | 'reinstall'
+        | 'upgradeOne'
+        | 'upgradeAll'
+        | 'pin'
+        | 'unpin'
+        | 'tapAdd'
+        | 'tapRemove'
+        | 'syncMetadata'
       >('all'),
       kindFilter: signal<'all' | 'formula' | 'cask' | 'system'>('all'),
       query: signal(''),
@@ -111,6 +121,7 @@ describe('AppShellComponent titlebar', () => {
           { path: 'updates', component: DummyRouteComponent },
           { path: 'installed', component: DummyRouteComponent },
           { path: 'browse', component: DummyRouteComponent },
+          { path: 'taps', component: DummyRouteComponent },
           { path: 'settings', component: DummyRouteComponent },
           { path: '', pathMatch: 'full', redirectTo: 'updates' }
         ]),
@@ -161,6 +172,23 @@ describe('AppShellComponent titlebar', () => {
       option.textContent?.includes('Check for updates now')
     );
     expect(paletteAction).toBeTruthy();
+  });
+
+  it('includes taps navigation action in command palette', async () => {
+    const { fixture } = await render();
+    const html = fixture.nativeElement as HTMLElement;
+
+    const paletteButton = html.querySelector(
+      '[data-testid="titlebar-palette"]'
+    ) as HTMLButtonElement | null;
+
+    paletteButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    const tapsAction = Array.from(html.querySelectorAll('[role="option"]')).find((option) =>
+      option.textContent?.includes('Go to Taps')
+    );
+    expect(tapsAction).toBeTruthy();
   });
 
   it('suppresses global toast for sync metadata job failures', async () => {

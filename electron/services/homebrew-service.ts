@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { spawn } from 'node:child_process';
+import { stat } from 'node:fs/promises';
 
 import type {
   BrewAvailability,
@@ -8,6 +10,7 @@ import type {
   BrewJobKind,
   BrewJobProgressEvent,
   BrewJobStream,
+  BrewTap,
   CatalogPackage,
   CheckNowResult,
   InstallOneRequest,
@@ -21,6 +24,8 @@ import type {
   SearchCatalogRequest,
   SearchCatalogResponse,
   SyncMetadataResult,
+  TapAddRequest,
+  TapRemoveRequest,
   UnpinOneRequest,
   UninstallOneRequest,
   UpgradeOneRequest
@@ -40,6 +45,12 @@ import { BrewCommandError, BrewRunner } from './brew-runner';
 
 const CATALOG_TTL_MS = 24 * 60 * 60 * 1000;
 const DETAILS_TTL_MS = 10 * 60 * 1000;
+const TAP_READ_TIMEOUT_MS = 30_000;
+const PROTECTED_TAP_NAMES = new Set(['homebrew/core', 'homebrew/cask']);
+const PROTECTED_TAP_ALIASES = new Map<string, string>([
+  ['homebrew/homebrew-core', 'homebrew/core'],
+  ['homebrew/homebrew-cask', 'homebrew/cask']
+]);
 
 interface CatalogMaterialized {
   packages: CatalogPackage[];
@@ -78,6 +89,23 @@ interface StructuredBrewError {
   message: string;
   exitCode: number;
   output: string;
+}
+
+interface TapPathResolution {
+  path: string | null;
+  pathExists: boolean;
+  warning: string | null;
+}
+
+interface TapGitState {
+  remote: string | null;
+  branch: string | null;
+  upstream: string | null;
+  ahead: number | null;
+  behind: number | null;
+  dirty: boolean;
+  syncState: BrewTap['syncState'];
+  warning: string | null;
 }
 
 export interface JobEventSink {
@@ -120,6 +148,14 @@ export function buildUnpinCommand(request: UnpinOneRequest): string[] {
   return ['unpin', request.name];
 }
 
+export function buildTapAddCommand(request: TapAddRequest): string[] {
+  return ['tap', request.name];
+}
+
+export function buildTapRemoveCommand(request: TapRemoveRequest): string[] {
+  return ['untap', request.name];
+}
+
 export class HomebrewService {
   private readonly runner = new BrewRunner();
   private readonly mutationQueue = new CommandQueue();
@@ -152,6 +188,52 @@ export class HomebrewService {
       formulae: formulaRaw.formulae,
       casks: caskRaw.casks
     });
+  }
+
+  async getTaps(): Promise<BrewTap[]> {
+    const [userTappedSet, now] = await Promise.all([
+      this.resolveUserTappedNames(),
+      Promise.resolve(new Date().toISOString())
+    ]);
+    const tapNames = new Set<string>([...userTappedSet, ...PROTECTED_TAP_NAMES]);
+    const items = await Promise.all(
+      Array.from(tapNames).map(async (name) => {
+        const protectedTap = PROTECTED_TAP_NAMES.has(name);
+        const userTapped = userTappedSet.has(name);
+        const pathResolution = await this.resolveTapPath(name);
+        const gitState = pathResolution.pathExists
+          ? await resolveTapGitState(pathResolution.path)
+          : resolveMissingTapGitState({
+              protectedTap,
+              userTapped
+            });
+        const warning = uniqueStrings([pathResolution.warning ?? '', gitState.warning ?? '']).join(' || ') || null;
+
+        return {
+          name,
+          official: name.startsWith('homebrew/'),
+          protected: protectedTap,
+          userTapped,
+          path: pathResolution.path,
+          remote: gitState.remote,
+          branch: gitState.branch,
+          upstream: gitState.upstream,
+          ahead: gitState.ahead,
+          behind: gitState.behind,
+          dirty: gitState.dirty,
+          syncState: gitState.syncState,
+          health: resolveTapHealth({
+            syncState: gitState.syncState,
+            dirty: gitState.dirty,
+            warning
+          }),
+          lastCheckedAt: now,
+          warning
+        } satisfies BrewTap;
+      })
+    );
+
+    return items.sort(compareBrewTaps);
   }
 
   async checkNow(): Promise<CheckNowResult> {
@@ -413,6 +495,50 @@ export class HomebrewService {
       });
     } finally {
       this.invalidateDetailsCacheEntry(request.kind, request.name);
+    }
+  }
+
+  async tapAdd(request: TapAddRequest, sink: JobEventSink): Promise<BrewJobCompleteEvent> {
+    const command = buildTapAddCommand(request);
+    try {
+      return await this.runQueuedTrackedJob({
+        action: 'tapAdd',
+        command,
+        target: {
+          packageName: request.name,
+          kind: 'system'
+        },
+        timeoutMs: 10 * 60 * 1000,
+        queuedMessage: `Queued tap add for ${request.name}`,
+        runningMessage: `Adding tap ${request.name}`,
+        sink
+      });
+    } finally {
+      this.invalidateAllDetailsCache();
+    }
+  }
+
+  async tapRemove(request: TapRemoveRequest, sink: JobEventSink): Promise<BrewJobCompleteEvent> {
+    if (PROTECTED_TAP_NAMES.has(normalizeTapNameForProtection(request.name))) {
+      throw new Error(`Cannot remove protected tap ${request.name}.`);
+    }
+
+    const command = buildTapRemoveCommand(request);
+    try {
+      return await this.runQueuedTrackedJob({
+        action: 'tapRemove',
+        command,
+        target: {
+          packageName: request.name,
+          kind: 'system'
+        },
+        timeoutMs: 5 * 60 * 1000,
+        queuedMessage: `Queued tap removal for ${request.name}`,
+        runningMessage: `Removing tap ${request.name}`,
+        sink
+      });
+    } finally {
+      this.invalidateAllDetailsCache();
     }
   }
 
@@ -772,6 +898,62 @@ export class HomebrewService {
     this.detailsCache.clear();
   }
 
+  private async resolveUserTappedNames(): Promise<Set<string>> {
+    const output = await this.runner.runText(['tap'], {
+      timeoutMs: TAP_READ_TIMEOUT_MS
+    });
+    return new Set(
+      output.stdout
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+    );
+  }
+
+  private async resolveTapPath(name: string): Promise<TapPathResolution> {
+    try {
+      const output = await this.runner.runText(['--repository', name], {
+        timeoutMs: TAP_READ_TIMEOUT_MS
+      });
+      const path = output.stdout.trim();
+      if (!path) {
+        return {
+          path: null,
+          pathExists: false,
+          warning: `Tap path unavailable for ${name}.`
+        };
+      }
+
+      let pathExists = false;
+      try {
+        const metadata = await stat(path);
+        pathExists = metadata.isDirectory();
+      } catch {
+        pathExists = false;
+      }
+
+      if (!pathExists) {
+        return {
+          path,
+          pathExists: false,
+          warning: null
+        };
+      }
+
+      return {
+        path,
+        pathExists: true,
+        warning: null
+      };
+    } catch (error) {
+      return {
+        path: null,
+        pathExists: false,
+        warning: `Unable to resolve tap path for ${name}: ${(error as Error).message}`
+      };
+    }
+  }
+
   private async resolveLocalDetails(request: PackageDetailsRequest): Promise<PackageDetails> {
     const raw = request.kind === 'formula'
       ? await this.runner.runJson<BrewInfoResponse>(['info', '--json=v2', '--formula', request.name])
@@ -933,6 +1115,255 @@ export class HomebrewService {
       throw error;
     }
   }
+}
+
+function normalizeTapNameForProtection(name: string): string {
+  const normalized = name.trim().toLocaleLowerCase();
+  return PROTECTED_TAP_ALIASES.get(normalized) ?? normalized;
+}
+
+function compareBrewTaps(left: BrewTap, right: BrewTap): number {
+  if (left.protected !== right.protected) {
+    return left.protected ? -1 : 1;
+  }
+
+  if (left.official !== right.official) {
+    return left.official ? -1 : 1;
+  }
+
+  return left.name.localeCompare(right.name);
+}
+
+function resolveTapHealth(options: {
+  syncState: BrewTap['syncState'];
+  dirty: boolean;
+  warning: string | null;
+}): BrewTap['health'] {
+  if (options.syncState === 'unknown') {
+    return 'error';
+  }
+
+  if (
+    options.dirty
+    || options.warning
+    || options.syncState === 'ahead'
+    || options.syncState === 'behind'
+    || options.syncState === 'diverged'
+    || options.syncState === 'noUpstream'
+  ) {
+    return 'attention';
+  }
+
+  return 'healthy';
+}
+
+function resolveMissingTapGitState(options: {
+  protectedTap: boolean;
+  userTapped: boolean;
+}): TapGitState {
+  // In Homebrew API mode, core/cask may not be cloned to disk.
+  if (options.protectedTap && !options.userTapped) {
+    return {
+      remote: null,
+      branch: null,
+      upstream: null,
+      ahead: null,
+      behind: null,
+      dirty: false,
+      syncState: 'upToDate',
+      warning: null
+    };
+  }
+
+  return {
+    remote: null,
+    branch: null,
+    upstream: null,
+    ahead: null,
+    behind: null,
+    dirty: false,
+    syncState: 'unknown',
+    warning: 'Tap git repository is not available locally.'
+  };
+}
+
+async function resolveTapGitState(path: string | null): Promise<TapGitState> {
+  if (!path) {
+    return {
+      remote: null,
+      branch: null,
+      upstream: null,
+      ahead: null,
+      behind: null,
+      dirty: false,
+      syncState: 'unknown',
+      warning: 'Tap git repository is not available locally.'
+    };
+  }
+
+  try {
+    const [statusResult, remoteResult] = await Promise.all([
+      runGitCommand(['-C', path, 'status', '--porcelain=2', '--branch']),
+      runGitCommand(['-C', path, 'config', '--get', 'remote.origin.url']).catch(() => ({
+        stdout: '',
+        stderr: '',
+        exitCode: 0
+      }))
+    ]);
+    const parsed = parseTapGitStatus(statusResult.stdout);
+
+    return {
+      ...parsed,
+      remote: readString(remoteResult.stdout)
+    };
+  } catch (error) {
+    return {
+      remote: null,
+      branch: null,
+      upstream: null,
+      ahead: null,
+      behind: null,
+      dirty: false,
+      syncState: 'unknown',
+      warning: `Unable to inspect tap git status: ${(error as Error).message}`
+    };
+  }
+}
+
+function parseTapGitStatus(stdout: string): Omit<TapGitState, 'remote' | 'warning'> {
+  let branch: string | null = null;
+  let upstream: string | null = null;
+  let ahead: number | null = null;
+  let behind: number | null = null;
+  let dirty = false;
+
+  for (const line of stdout.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0) {
+      continue;
+    }
+
+    if (trimmed.startsWith('# branch.head ')) {
+      const value = trimmed.replace('# branch.head ', '').trim();
+      branch = value === '(detached)' ? null : value;
+      continue;
+    }
+
+    if (trimmed.startsWith('# branch.upstream ')) {
+      upstream = trimmed.replace('# branch.upstream ', '').trim() || null;
+      continue;
+    }
+
+    if (trimmed.startsWith('# branch.ab ')) {
+      const match = trimmed.match(/^# branch\.ab \+(\d+) \-(\d+)$/);
+      if (match) {
+        ahead = Number(match[1]);
+        behind = Number(match[2]);
+      }
+      continue;
+    }
+
+    if (!trimmed.startsWith('# ')) {
+      dirty = true;
+    }
+  }
+
+  return {
+    branch,
+    upstream,
+    ahead,
+    behind,
+    dirty,
+    syncState: resolveTapSyncState({ upstream, ahead, behind })
+  };
+}
+
+function resolveTapSyncState(options: {
+  upstream: string | null;
+  ahead: number | null;
+  behind: number | null;
+}): BrewTap['syncState'] {
+  if (!options.upstream) {
+    return 'noUpstream';
+  }
+
+  if (options.ahead === null || options.behind === null) {
+    return 'unknown';
+  }
+
+  if (options.ahead > 0 && options.behind > 0) {
+    return 'diverged';
+  }
+
+  if (options.ahead > 0) {
+    return 'ahead';
+  }
+
+  if (options.behind > 0) {
+    return 'behind';
+  }
+
+  return 'upToDate';
+}
+
+async function runGitCommand(args: string[], timeoutMs = 15_000): Promise<{
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+}> {
+  return new Promise((resolve, reject) => {
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+    const commandText = `git ${args.join(' ')}`;
+    const child = spawn('git', args);
+
+    const timeout = setTimeout(() => {
+      child.kill('SIGTERM');
+      if (!settled) {
+        settled = true;
+        reject(new Error(`${commandText} timed out after ${timeoutMs}ms`));
+      }
+    }, timeoutMs);
+
+    const finalize = (): void => {
+      clearTimeout(timeout);
+    };
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on('error', (error) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      finalize();
+      reject(new Error(`${commandText} failed: ${error.message}`));
+    });
+
+    child.on('close', (exitCode) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      finalize();
+
+      if (exitCode && exitCode !== 0) {
+        reject(new Error(stderr.trim() || `${commandText} exited with code ${exitCode}`));
+        return;
+      }
+
+      resolve({ stdout, stderr, exitCode: exitCode ?? 0 });
+    });
+  });
 }
 
 function normalizeFormulaDetails(

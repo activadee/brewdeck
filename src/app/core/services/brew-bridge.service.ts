@@ -11,6 +11,7 @@ import {
   type BrewJobFailedEvent,
   type BrewJobKind,
   type BrewJobProgressEvent,
+  type BrewTap,
   type CheckNowResult,
   type InstallOneRequest,
   type PackageDetails,
@@ -19,6 +20,8 @@ import {
   type ReinstallOneRequest,
   type SearchCatalogRequest,
   type SearchCatalogResponse,
+  type TapAddRequest,
+  type TapRemoveRequest,
   type UnpinOneRequest,
   type UninstallOneRequest,
   type UpdatesChangedEvent,
@@ -70,6 +73,9 @@ const createFallbackBridge = (): BrewGuiBridge => ({
     return [];
   },
   async getOutdated() {
+    return [];
+  },
+  async getTaps(): Promise<BrewTap[]> {
     return [];
   },
   async getPackageDetails(_request: PackageDetailsRequest): Promise<PackageDetails> {
@@ -150,6 +156,22 @@ const createFallbackBridge = (): BrewGuiBridge => ({
       action: 'unpin',
       command: `brew unpin ${_request.name}`,
       kind: 'formula',
+      packageName: _request.name
+    });
+  },
+  async tapAdd(_request: TapAddRequest): Promise<BrewJobCompleteEvent> {
+    return createFallbackJobCompleteEvent({
+      action: 'tapAdd',
+      command: `brew tap ${_request.name}`,
+      kind: 'system',
+      packageName: _request.name
+    });
+  },
+  async tapRemove(_request: TapRemoveRequest): Promise<BrewJobCompleteEvent> {
+    return createFallbackJobCompleteEvent({
+      action: 'tapRemove',
+      command: `brew untap ${_request.name}`,
+      kind: 'system',
       packageName: _request.name
     });
   },

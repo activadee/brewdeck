@@ -40,6 +40,62 @@ export const catalogPackageSchema = z.object({
 });
 export type CatalogPackage = z.infer<typeof catalogPackageSchema>;
 
+const tapNamePattern = /^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/;
+
+export const tapNameSchema = z
+  .string()
+  .trim()
+  .regex(tapNamePattern, 'tap name must match owner/repo');
+
+export const brewTapSyncStateSchema = z.union([
+  z.literal('upToDate'),
+  z.literal('ahead'),
+  z.literal('behind'),
+  z.literal('diverged'),
+  z.literal('noUpstream'),
+  z.literal('unknown')
+]);
+export type BrewTapSyncState = z.infer<typeof brewTapSyncStateSchema>;
+
+export const brewTapHealthSchema = z.union([
+  z.literal('healthy'),
+  z.literal('attention'),
+  z.literal('error')
+]);
+export type BrewTapHealth = z.infer<typeof brewTapHealthSchema>;
+
+export const brewTapSchema = z.object({
+  name: z.string(),
+  official: z.boolean(),
+  protected: z.boolean(),
+  userTapped: z.boolean(),
+  path: z.string().nullable(),
+  remote: z.string().nullable(),
+  branch: z.string().nullable(),
+  upstream: z.string().nullable(),
+  ahead: z.number().int().nonnegative().nullable(),
+  behind: z.number().int().nonnegative().nullable(),
+  dirty: z.boolean(),
+  syncState: brewTapSyncStateSchema,
+  health: brewTapHealthSchema,
+  lastCheckedAt: z.string(),
+  warning: z.string().nullable()
+});
+export type BrewTap = z.infer<typeof brewTapSchema>;
+
+export const getTapsResponseSchema = z.array(brewTapSchema);
+export type GetTapsResponse = z.infer<typeof getTapsResponseSchema>;
+
+export const tapAddRequestSchema = z.object({
+  name: tapNameSchema
+});
+export type TapAddRequest = z.infer<typeof tapAddRequestSchema>;
+
+export const tapRemoveRequestSchema = z.object({
+  name: tapNameSchema
+});
+export type TapRemoveRequest = z.infer<typeof tapRemoveRequestSchema>;
+
 export const appSettingsSchema = z.object({
   checkIntervalMinutes: z.union([z.literal(60), z.literal(360), z.literal(1440)]),
   autoCheckOnLaunch: z.boolean(),
@@ -257,6 +313,8 @@ export const brewJobActionSchema = z.union([
   z.literal('upgradeAll'),
   z.literal('pin'),
   z.literal('unpin'),
+  z.literal('tapAdd'),
+  z.literal('tapRemove'),
   z.literal('syncMetadata')
 ]);
 export type BrewJobAction = z.infer<typeof brewJobActionSchema>;
@@ -331,6 +389,7 @@ export interface BrewGuiBridge {
   getBrewAvailability(): Promise<BrewAvailability>;
   getInstalled(): Promise<InstalledPackage[]>;
   getOutdated(): Promise<OutdatedPackage[]>;
+  getTaps(): Promise<GetTapsResponse>;
   getPackageDetails(request: PackageDetailsRequest): Promise<PackageDetails>;
   searchCatalog(request: SearchCatalogRequest): Promise<SearchCatalogResponse>;
   installOne(request: InstallOneRequest): Promise<BrewJobCompleteEvent>;
@@ -338,6 +397,8 @@ export interface BrewGuiBridge {
   uninstallOne(request: UninstallOneRequest): Promise<BrewJobCompleteEvent>;
   pinOne(request: PinOneRequest): Promise<BrewJobCompleteEvent>;
   unpinOne(request: UnpinOneRequest): Promise<BrewJobCompleteEvent>;
+  tapAdd(request: TapAddRequest): Promise<BrewJobCompleteEvent>;
+  tapRemove(request: TapRemoveRequest): Promise<BrewJobCompleteEvent>;
   upgradeOne(request: UpgradeOneRequest): Promise<BrewJobCompleteEvent>;
   upgradeAll(): Promise<BrewJobCompleteEvent>;
   checkNow(): Promise<CheckNowResult>;

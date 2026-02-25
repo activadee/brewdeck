@@ -8,6 +8,7 @@ describe('IPC channel allowlist', () => {
 
     expect(channels).toContain('brew:getInstalled');
     expect(channels).toContain('brew:getOutdated');
+    expect(channels).toContain('brew:getTaps');
     expect(channels).toContain('brew:getPackageDetails');
     expect(channels).toContain('brew:searchCatalog');
     expect(channels).toContain('app:windowControl');
@@ -17,6 +18,8 @@ describe('IPC channel allowlist', () => {
     expect(channels).toContain('brew:uninstallOne');
     expect(channels).toContain('brew:pinOne');
     expect(channels).toContain('brew:unpinOne');
+    expect(channels).toContain('brew:tapAdd');
+    expect(channels).toContain('brew:tapRemove');
     expect(channels).toContain('brew:upgradeOne');
     expect(channels).toContain('brew:upgradeAll');
     expect(channels).toContain('brew:checkNow');

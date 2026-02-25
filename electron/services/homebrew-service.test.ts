@@ -1,3 +1,8 @@
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({
@@ -9,8 +14,10 @@ vi.mock('electron', () => ({
 import {
   brewJobActionSchema,
   packageDetailsRequestSchema,
-  reinstallOneRequestSchema,
   pinOneRequestSchema,
+  reinstallOneRequestSchema,
+  tapAddRequestSchema,
+  tapRemoveRequestSchema,
   unpinOneRequestSchema,
   uninstallOneRequestSchema,
   type PackageDetails
@@ -19,11 +26,28 @@ import {
   buildInstallCommand,
   buildPinCommand,
   buildReinstallCommand,
+  buildTapAddCommand,
+  buildTapRemoveCommand,
   buildUninstallCommand,
   buildUnpinCommand,
   HomebrewService
 } from './homebrew-service';
 import { BrewCommandError } from './brew-runner';
+
+function runGit(args: string[], cwd: string): string {
+  return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] }).toString();
+}
+
+function configureGitAuthor(cwd: string): void {
+  runGit(['config', 'user.email', 'brew-gui-tests@example.com'], cwd);
+  runGit(['config', 'user.name', 'Brew GUI Tests'], cwd);
+}
+
+function commitFile(cwd: string, fileName: string, contents: string, message: string): void {
+  writeFileSync(path.join(cwd, fileName), contents);
+  runGit(['add', fileName], cwd);
+  runGit(['commit', '-m', message], cwd);
+}
 
 describe('buildInstallCommand', () => {
   it('builds formula install command', () => {
@@ -109,6 +133,18 @@ describe('buildUnpinCommand', () => {
   });
 });
 
+describe('buildTapAddCommand', () => {
+  it('builds tap add command', () => {
+    expect(buildTapAddCommand({ name: 'sst/tap' })).toEqual(['tap', 'sst/tap']);
+  });
+});
+
+describe('buildTapRemoveCommand', () => {
+  it('builds tap remove command', () => {
+    expect(buildTapRemoveCommand({ name: 'sst/tap' })).toEqual(['untap', 'sst/tap']);
+  });
+});
+
 describe('uninstallOneRequestSchema', () => {
   it('rejects zap for formula uninstall requests', () => {
     const parsed = uninstallOneRequestSchema.safeParse({
@@ -163,6 +199,14 @@ describe('packageDetailsRequestSchema', () => {
     });
 
     expect(parsed.success).toBe(false);
+  });
+});
+
+describe('tap request schemas', () => {
+  it('accepts owner/repo tap names and rejects invalid ones', () => {
+    expect(tapAddRequestSchema.safeParse({ name: 'sst/tap' }).success).toBe(true);
+    expect(tapRemoveRequestSchema.safeParse({ name: 'steipete/tap' }).success).toBe(true);
+    expect(tapAddRequestSchema.safeParse({ name: 'not-a-tap' }).success).toBe(false);
   });
 });
 
@@ -316,6 +360,148 @@ describe('HomebrewService.getPackageDetails', () => {
       'Unable to load package details for formula:ripgrep.'
     );
   });
+});
+
+describe('HomebrewService.getTaps', () => {
+  it('treats protected taps without local clones as healthy in API mode', async () => {
+    const missingPath = path.join(os.tmpdir(), `brew-gui-missing-${Date.now()}`);
+
+    const service = new HomebrewService() as any;
+    service.runner = {
+      runText: vi.fn(async (args: string[]) => {
+        if (args[0] === 'tap') {
+          return {
+            stdout: '',
+            stderr: '',
+            exitCode: 0
+          };
+        }
+
+        if (args[0] === '--repository' && typeof args[1] === 'string') {
+          return { stdout: `${missingPath}\n`, stderr: '', exitCode: 0 };
+        }
+
+        throw new Error(`Unexpected brew command ${args.join(' ')}`);
+      })
+    };
+
+    const taps = await service.getTaps();
+
+    const core = taps.find((tap: { name: string }) => tap.name === 'homebrew/core');
+    const cask = taps.find((tap: { name: string }) => tap.name === 'homebrew/cask');
+
+    expect(core?.health).toBe('healthy');
+    expect(core?.syncState).toBe('upToDate');
+    expect(core?.warning).toBeNull();
+    expect(cask?.health).toBe('healthy');
+    expect(cask?.syncState).toBe('upToDate');
+    expect(cask?.warning).toBeNull();
+  });
+
+  it('maps local git status into tap sync and health states', async () => {
+    const sandbox = mkdtempSync(path.join(os.tmpdir(), 'brew-gui-taps-'));
+
+    try {
+      const remote = path.join(sandbox, 'remote.git');
+      runGit(['init', '--bare', remote], sandbox);
+
+      const seed = path.join(sandbox, 'seed');
+      runGit(['clone', remote, seed], sandbox);
+      configureGitAuthor(seed);
+      commitFile(seed, 'README.md', 'seed', 'seed commit');
+      runGit(['push', 'origin', 'HEAD'], seed);
+
+      const upToDatePath = path.join(sandbox, 'up-to-date');
+      runGit(['clone', remote, upToDatePath], sandbox);
+      configureGitAuthor(upToDatePath);
+
+      const dirtyPath = path.join(sandbox, 'dirty');
+      runGit(['clone', remote, dirtyPath], sandbox);
+      configureGitAuthor(dirtyPath);
+      writeFileSync(path.join(dirtyPath, 'DIRTY.txt'), 'dirty');
+
+      const aheadPath = path.join(sandbox, 'ahead');
+      runGit(['clone', remote, aheadPath], sandbox);
+      configureGitAuthor(aheadPath);
+      commitFile(aheadPath, 'ahead.txt', 'ahead', 'ahead commit');
+
+      const behindPath = path.join(sandbox, 'behind');
+      runGit(['clone', remote, behindPath], sandbox);
+      configureGitAuthor(behindPath);
+
+      const upstreamWriter = path.join(sandbox, 'upstream-writer');
+      runGit(['clone', remote, upstreamWriter], sandbox);
+      configureGitAuthor(upstreamWriter);
+      commitFile(upstreamWriter, 'upstream.txt', 'upstream', 'upstream commit');
+      runGit(['push', 'origin', 'HEAD'], upstreamWriter);
+      runGit(['fetch', 'origin'], behindPath);
+
+      const noUpstreamPath = path.join(sandbox, 'no-upstream');
+      runGit(['init', noUpstreamPath], sandbox);
+      configureGitAuthor(noUpstreamPath);
+      commitFile(noUpstreamPath, 'no-upstream.txt', 'local', 'local commit');
+
+      const tapPaths: Record<string, string> = {
+        'homebrew/core': upToDatePath,
+        'homebrew/cask': upToDatePath,
+        'user/up-to-date': upToDatePath,
+        'user/dirty': dirtyPath,
+        'user/ahead': aheadPath,
+        'user/behind': behindPath,
+        'user/no-upstream': noUpstreamPath
+      };
+
+      const service = new HomebrewService() as any;
+      service.runner = {
+        runText: vi.fn(async (args: string[]) => {
+          if (args[0] === 'tap') {
+            return {
+              stdout: ['user/up-to-date', 'user/dirty', 'user/ahead', 'user/behind', 'user/no-upstream'].join('\n'),
+              stderr: '',
+              exitCode: 0
+            };
+          }
+
+          if (args[0] === '--repository' && typeof args[1] === 'string') {
+            const repositoryPath = tapPaths[args[1]];
+            if (!repositoryPath) {
+              throw new Error(`Unknown tap ${args[1]}`);
+            }
+            return { stdout: `${repositoryPath}\n`, stderr: '', exitCode: 0 };
+          }
+
+          throw new Error(`Unexpected brew command ${args.join(' ')}`);
+        })
+      };
+
+      const taps = await service.getTaps();
+
+      const upToDate = taps.find((tap: { name: string }) => tap.name === 'user/up-to-date');
+      const dirty = taps.find((tap: { name: string }) => tap.name === 'user/dirty');
+      const ahead = taps.find((tap: { name: string }) => tap.name === 'user/ahead');
+      const behind = taps.find((tap: { name: string }) => tap.name === 'user/behind');
+      const noUpstream = taps.find((tap: { name: string }) => tap.name === 'user/no-upstream');
+
+      expect(upToDate?.syncState).toBe('upToDate');
+      expect(upToDate?.health).toBe('healthy');
+
+      expect(dirty?.dirty).toBe(true);
+      expect(dirty?.health).toBe('attention');
+
+      expect(ahead?.syncState).toBe('ahead');
+      expect(ahead?.ahead).toBeGreaterThan(0);
+      expect(ahead?.health).toBe('attention');
+
+      expect(behind?.syncState).toBe('behind');
+      expect(behind?.behind).toBeGreaterThan(0);
+      expect(behind?.health).toBe('attention');
+
+      expect(noUpstream?.syncState).toBe('noUpstream');
+      expect(noUpstream?.health).toBe('attention');
+    } finally {
+      rmSync(sandbox, { recursive: true, force: true });
+    }
+  }, 20_000);
 });
 
 describe('HomebrewService.installOne', () => {
@@ -535,6 +721,141 @@ describe('HomebrewService.unpinOne', () => {
 
     expect(enqueue).toHaveBeenCalledTimes(1);
     expect(enqueue.mock.calls[0]?.[1]).toBe(5 * 60 * 1000);
+  });
+});
+
+describe('HomebrewService.tapAdd', () => {
+  it('enqueues tap add jobs with tap timeout and emits action metadata', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => ({ stdout: 'tapped', stderr: '', exitCode: 0 }));
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+    const onProgress = vi.fn();
+    const onComplete = vi.fn();
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    const result = await service.tapAdd(
+      { name: 'sst/tap' },
+      {
+        onProgress,
+        onComplete,
+        onFailed: () => undefined
+      }
+    );
+
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(enqueue.mock.calls[0]?.[1]).toBe(10 * 60 * 1000);
+    expect(onProgress.mock.calls[0]?.[0].action).toBe('tapAdd');
+    expect(result.action).toBe('tapAdd');
+    expect(result.kind).toBe('system');
+    expect(result.command).toBe('brew tap sst/tap');
+  });
+});
+
+describe('HomebrewService.tapRemove', () => {
+  it('rejects protected taps before enqueueing work', async () => {
+    const service = new HomebrewService() as any;
+    const enqueue = vi.fn();
+
+    service.mutationQueue = { enqueue };
+
+    await expect(
+      service.tapRemove(
+        { name: 'homebrew/core' },
+        {
+          onProgress: () => undefined,
+          onComplete: () => undefined,
+          onFailed: () => undefined
+        }
+      )
+    ).rejects.toThrow('Cannot remove protected tap homebrew/core.');
+    expect(enqueue).not.toHaveBeenCalled();
+  });
+
+  it('rejects protected tap aliases before enqueueing work', async () => {
+    const aliases = ['homebrew/homebrew-core', 'homebrew/homebrew-cask'];
+
+    for (const name of aliases) {
+      const service = new HomebrewService() as any;
+      const enqueue = vi.fn();
+
+      service.mutationQueue = { enqueue };
+
+      await expect(
+        service.tapRemove(
+          { name },
+          {
+            onProgress: () => undefined,
+            onComplete: () => undefined,
+            onFailed: () => undefined
+          }
+        )
+      ).rejects.toThrow(`Cannot remove protected tap ${name}.`);
+
+      expect(enqueue).not.toHaveBeenCalled();
+    }
+  });
+
+  it('enqueues tap remove jobs with remove timeout', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => ({ stdout: 'untapped', stderr: '', exitCode: 0 }));
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    await service.tapRemove(
+      { name: 'sst/tap' },
+      {
+        onProgress: () => undefined,
+        onComplete: () => undefined,
+        onFailed: () => undefined
+      }
+    );
+
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(enqueue.mock.calls[0]?.[1]).toBe(5 * 60 * 1000);
+  });
+
+  it('emits structured failed events when untap command fails', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => {
+      throw new BrewCommandError('brew untap failed', {
+        command: ['untap', 'sst/tap'],
+        exitCode: 1,
+        stdout: '',
+        stderr: 'Error: tap still in use'
+      });
+    });
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+    const onFailed = vi.fn();
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    await expect(
+      service.tapRemove(
+        { name: 'sst/tap' },
+        {
+          onProgress: () => undefined,
+          onComplete: () => undefined,
+          onFailed
+        }
+      )
+    ).rejects.toThrow();
+
+    expect(onFailed).toHaveBeenCalledTimes(1);
+    expect(onFailed.mock.calls[0]?.[0].action).toBe('tapRemove');
+    expect(onFailed.mock.calls[0]?.[0].kind).toBe('system');
+    expect(onFailed.mock.calls[0]?.[0].command).toBe('brew untap sst/tap');
+    expect(onFailed.mock.calls[0]?.[0].exitCode).toBe(1);
   });
 });
 

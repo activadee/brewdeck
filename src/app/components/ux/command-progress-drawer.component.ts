@@ -159,6 +159,8 @@ export class CommandProgressDrawerComponent {
     { value: 'upgradeAll', label: 'Upgrade all' },
     { value: 'pin', label: 'Pin' },
     { value: 'unpin', label: 'Unpin' },
+    { value: 'tapAdd', label: 'Tap add' },
+    { value: 'tapRemove', label: 'Tap remove' },
     { value: 'syncMetadata', label: 'Sync metadata' }
   ];
 
@@ -197,6 +199,10 @@ export class CommandProgressDrawerComponent {
         return 'Pin formula';
       case 'unpin':
         return 'Unpin formula';
+      case 'tapAdd':
+        return 'Add tap';
+      case 'tapRemove':
+        return 'Remove tap';
       case 'syncMetadata':
         return 'Sync metadata';
       default:

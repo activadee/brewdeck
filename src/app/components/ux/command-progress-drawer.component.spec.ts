@@ -36,7 +36,17 @@ describe('CommandProgressDrawerComponent', () => {
       failedCount: signal(0),
       statusFilter: signal<'all' | 'running' | 'succeeded' | 'failed'>('all'),
       actionFilter: signal<
-        'all' | 'install' | 'uninstall' | 'reinstall' | 'upgradeOne' | 'upgradeAll' | 'pin' | 'unpin' | 'syncMetadata'
+        | 'all'
+        | 'install'
+        | 'uninstall'
+        | 'reinstall'
+        | 'upgradeOne'
+        | 'upgradeAll'
+        | 'pin'
+        | 'unpin'
+        | 'tapAdd'
+        | 'tapRemove'
+        | 'syncMetadata'
       >('all'),
       kindFilter: signal<'all' | 'formula' | 'cask' | 'system'>('all'),
       query: signal(''),
