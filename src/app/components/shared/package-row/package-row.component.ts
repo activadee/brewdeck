@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 import { ZardCardComponent } from '@/shared/components/card';
-import type { PackageKind } from '../../../../shared/contracts';
+import type { PackageKind, PackageReplacement } from '../../../../shared/contracts';
 import { PackageActionButtonComponent } from '../package-action-button/package-action-button.component';
 import { PackageMetaComponent } from '../package-meta/package-meta.component';
 import {
@@ -29,6 +29,9 @@ export class PackageRowComponent {
   readonly installedVersion = input<string | null>(null);
   readonly currentVersion = input<string | null>(null);
   readonly tap = input<string | null>(null);
+  readonly deprecated = input(false);
+  readonly disabled = input(false);
+  readonly replacement = input<PackageReplacement | null>(null);
   readonly actionLabel = input<string | null>(null);
   readonly actionDisabled = input(false);
   readonly actionVariant = input<'primary' | 'secondary'>('secondary');

@@ -25,6 +25,9 @@ const sampleDetails: PackageDetails = {
   },
   deprecated: false,
   disabled: false,
+  deprecationReason: null,
+  disableReason: null,
+  replacement: null,
   pinned: false,
   warnings: [],
   source: 'hybrid',
@@ -41,6 +44,7 @@ describe('PackageDetailsDrawerComponent', () => {
       details: signal<PackageDetails | null>(null),
       warnings: signal<string[]>([]),
       close: vi.fn(),
+      openFor: vi.fn(async () => undefined),
       reload: vi.fn(async () => undefined)
     };
 
@@ -126,5 +130,37 @@ describe('PackageDetailsDrawerComponent', () => {
     fixture.detectChanges();
 
     expect(store.close).toHaveBeenCalled();
+  });
+
+  it('renders lifecycle recommendation and opens replacement details', async () => {
+    const { fixture, store } = await render();
+    const html = fixture.nativeElement as HTMLElement;
+
+    store.open.set(true);
+    store.details.set({
+      ...sampleDetails,
+      deprecated: true,
+      deprecationReason: 'repo_archived',
+      replacement: {
+        kind: 'formula',
+        name: 'mise'
+      }
+    });
+    fixture.detectChanges();
+
+    expect(html.textContent).toContain('Lifecycle');
+    expect(html.textContent).toContain('Deprecated');
+    expect(html.textContent).toContain('mise');
+
+    const replacementButton = Array.from(html.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('View replacement details')
+    );
+    replacementButton?.click();
+    await fixture.whenStable();
+
+    expect(store.openFor).toHaveBeenCalledWith({
+      kind: 'formula',
+      name: 'mise'
+    });
   });
 });

@@ -6,6 +6,7 @@ import {
   brewJobCompleteEventSchema,
   brewJobFailedEventSchema,
   brewJobProgressEventSchema,
+  installedPackageSchema,
   brewServiceSchema,
   cleanupPreviewResultSchema,
   packageDetailsRequestSchema,
@@ -82,6 +83,9 @@ describe('window chrome contracts', () => {
       },
       deprecated: false,
       disabled: false,
+      deprecationReason: null,
+      disableReason: null,
+      replacement: null,
       pinned: false,
       warnings: [],
       source: 'hybrid',
@@ -95,6 +99,31 @@ describe('window chrome contracts', () => {
   it('rejects invalid package detail requests', () => {
     const parsed = packageDetailsRequestSchema.safeParse({ kind: 'formula', name: '' });
     expect(parsed.success).toBe(false);
+  });
+
+  it('parses installed package payloads with lifecycle metadata', () => {
+    const parsed = installedPackageSchema.parse({
+      id: 'formula:aftman',
+      kind: 'formula',
+      name: 'aftman',
+      desc: 'Tool manager',
+      installedVersion: '0.1.0',
+      currentVersion: '0.1.0',
+      pinned: false,
+      tap: 'homebrew/core',
+      homepage: 'https://example.com/aftman',
+      deprecated: true,
+      disabled: false,
+      deprecationReason: 'repo_archived',
+      disableReason: null,
+      replacement: {
+        kind: 'formula',
+        name: 'mise'
+      }
+    });
+
+    expect(parsed.deprecated).toBe(true);
+    expect(parsed.replacement?.name).toBe('mise');
   });
 
   it('parses tap payloads and validates tap request names', () => {

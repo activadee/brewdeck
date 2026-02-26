@@ -258,6 +258,9 @@ describe('HomebrewService.getPackageDetails', () => {
       },
       deprecated: false,
       disabled: false,
+      deprecationReason: null,
+      disableReason: null,
+      replacement: null,
       pinned: false,
       warnings: [],
       source: 'local',
@@ -335,6 +338,38 @@ describe('HomebrewService.getPackageDetails', () => {
     expect(result.dependencies.map((group) => group.key)).toEqual(
       expect.arrayContaining(['runtime', 'build'])
     );
+  });
+
+  it('prefers non-null lifecycle reason and replacement metadata during merge', async () => {
+    const service = new HomebrewService() as any;
+    service.resolveLocalDetails = vi.fn(async () =>
+      createDetails({
+        deprecated: true,
+        deprecationReason: null,
+        replacement: null,
+        source: 'local'
+      })
+    );
+    service.resolveRemoteDetails = vi.fn(async () =>
+      createDetails({
+        deprecated: true,
+        deprecationReason: 'repo_archived',
+        replacement: {
+          kind: 'formula',
+          name: 'mise'
+        },
+        source: 'remote'
+      })
+    );
+
+    const result = await service.getPackageDetails(request);
+
+    expect(result.source).toBe('hybrid');
+    expect(result.deprecationReason).toBe('repo_archived');
+    expect(result.replacement).toEqual({
+      kind: 'formula',
+      name: 'mise'
+    });
   });
 
   it('returns a cache result when the cache entry is still fresh', async () => {

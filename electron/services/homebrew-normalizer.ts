@@ -2,7 +2,8 @@ import type {
   CatalogPackage,
   InstalledPackage,
   OutdatedPackage,
-  PackageKind
+  PackageKind,
+  PackageReplacement
 } from '../../src/shared/contracts';
 
 const byName = <T extends { name: string }>(a: T, b: T): number => a.name.localeCompare(b.name);
@@ -17,6 +18,14 @@ export interface BrewInfoResponse {
 export interface BrewOutdatedResponse {
   formulae?: unknown[];
   casks?: unknown[];
+}
+
+interface LifecycleMetadata {
+  deprecated: boolean;
+  disabled: boolean;
+  deprecationReason: string | null;
+  disableReason: string | null;
+  replacement: PackageReplacement | null;
 }
 
 export function normalizeInstalled(raw: BrewInfoResponse): InstalledPackage[] {
@@ -76,6 +85,7 @@ function normalizeInstalledFormula(raw: unknown): InstalledPackage | null {
 
   const currentVersion =
     (isObject(raw.versions) && typeof raw.versions.stable === 'string' && raw.versions.stable) || null;
+  const lifecycle = normalizeLifecycle(raw, 'formula');
 
   return {
     id: packageId('formula', raw.name),
@@ -86,7 +96,8 @@ function normalizeInstalledFormula(raw: unknown): InstalledPackage | null {
     currentVersion,
     pinned: Boolean(raw.pinned),
     tap: typeof raw.tap === 'string' ? raw.tap : null,
-    homepage: typeof raw.homepage === 'string' ? raw.homepage : null
+    homepage: typeof raw.homepage === 'string' ? raw.homepage : null,
+    ...lifecycle
   };
 }
 
@@ -108,6 +119,7 @@ function normalizeInstalledCask(raw: unknown): InstalledPackage | null {
 
   const installedVersion = getInstalledCaskVersion(raw);
   const currentVersion = typeof raw.version === 'string' ? raw.version : null;
+  const lifecycle = normalizeLifecycle(raw, 'cask');
 
   return {
     id: packageId('cask', name),
@@ -118,7 +130,8 @@ function normalizeInstalledCask(raw: unknown): InstalledPackage | null {
     currentVersion,
     pinned: false,
     tap: typeof raw.tap === 'string' ? raw.tap : 'homebrew/cask',
-    homepage: typeof raw.homepage === 'string' ? raw.homepage : null
+    homepage: typeof raw.homepage === 'string' ? raw.homepage : null,
+    ...lifecycle
   };
 }
 
@@ -241,6 +254,77 @@ function getInstalledCaskVersion(raw: Record<string, unknown>): string {
   }
 
   return 'unknown';
+}
+
+function normalizeLifecycle(raw: Record<string, unknown>, preferredKind: PackageKind): LifecycleMetadata {
+  const deprecated = Boolean(raw.deprecated);
+  const disabled = Boolean(raw.disabled);
+  const deprecationReason = readString(raw.deprecation_reason);
+  const disableReason = readString(raw.disable_reason);
+
+  let replacement: PackageReplacement | null = null;
+  if (disabled) {
+    replacement =
+      resolveReplacement(raw, preferredKind, 'disable') ?? resolveReplacement(raw, preferredKind, 'deprecation');
+  } else if (deprecated) {
+    replacement = resolveReplacement(raw, preferredKind, 'deprecation');
+  }
+
+  return {
+    deprecated,
+    disabled,
+    deprecationReason,
+    disableReason,
+    replacement
+  };
+}
+
+function resolveReplacement(
+  raw: Record<string, unknown>,
+  preferredKind: PackageKind,
+  stage: 'deprecation' | 'disable'
+): PackageReplacement | null {
+  const formulaName = readString(raw[`${stage}_replacement_formula`]);
+  const caskName = readString(raw[`${stage}_replacement_cask`]);
+
+  if (preferredKind === 'formula' && formulaName) {
+    return {
+      kind: 'formula',
+      name: formulaName
+    };
+  }
+
+  if (preferredKind === 'cask' && caskName) {
+    return {
+      kind: 'cask',
+      name: caskName
+    };
+  }
+
+  if (formulaName) {
+    return {
+      kind: 'formula',
+      name: formulaName
+    };
+  }
+
+  if (caskName) {
+    return {
+      kind: 'cask',
+      name: caskName
+    };
+  }
+
+  return null;
+}
+
+function readString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function isObject(value: unknown): value is Record<string, any> {

@@ -3,6 +3,12 @@ import { z } from 'zod';
 export const packageKindSchema = z.enum(['formula', 'cask']);
 export type PackageKind = z.infer<typeof packageKindSchema>;
 
+export const packageReplacementSchema = z.object({
+  kind: packageKindSchema,
+  name: z.string().min(1)
+});
+export type PackageReplacement = z.infer<typeof packageReplacementSchema>;
+
 export const installedPackageSchema = z.object({
   id: z.string(),
   kind: packageKindSchema,
@@ -12,7 +18,12 @@ export const installedPackageSchema = z.object({
   currentVersion: z.string().nullable(),
   pinned: z.boolean(),
   tap: z.string().nullable(),
-  homepage: z.string().nullable()
+  homepage: z.string().nullable(),
+  deprecated: z.boolean(),
+  disabled: z.boolean(),
+  deprecationReason: z.string().nullable(),
+  disableReason: z.string().nullable(),
+  replacement: packageReplacementSchema.nullable()
 });
 export type InstalledPackage = z.infer<typeof installedPackageSchema>;
 
@@ -207,6 +218,9 @@ export const packageDetailsSchema = z.object({
   versionSnapshot: packageVersionSnapshotSchema,
   deprecated: z.boolean(),
   disabled: z.boolean(),
+  deprecationReason: z.string().nullable(),
+  disableReason: z.string().nullable(),
+  replacement: packageReplacementSchema.nullable(),
   pinned: z.boolean(),
   warnings: z.array(z.string()),
   source: packageDetailsSourceSchema,

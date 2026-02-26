@@ -30,6 +30,21 @@
         (selectedChange)="onPinFilterChange($event)"
       />
 
+      <app-package-filter-chips
+        [selected]="installedStore.lifecycleFilter()"
+        [options]="lifecycleFilterOptions()"
+        (selectedChange)="onLifecycleFilterChange($event)"
+      />
+
+      <z-card class="border-border/70 bg-card/95 shadow-sm">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Package lifecycle</span>
+          <span class="mono text-[10px] text-muted-foreground">healthy {{ installedStore.healthyCount() }}</span>
+          <span class="mono text-[10px] text-muted-foreground">deprecated {{ installedStore.deprecatedOnlyCount() }}</span>
+          <span class="mono text-[10px] text-muted-foreground">disabled {{ installedStore.disabledCount() }}</span>
+        </div>
+      </z-card>
+
       @if (installedStore.loading()) {
         <app-loading-state label="Loading installed formulae and casks…" />
       } @else if (installedStore.error()) {
@@ -50,6 +65,9 @@
               [installedVersion]="item.installedVersion"
               [currentVersion]="item.currentVersion"
               [tap]="item.tap"
+              [deprecated]="item.deprecated"
+              [disabled]="item.disabled"
+              [replacement]="item.replacement"
               [actionLabel]="'Uninstall'"
               [actionDisabled]="actionBusy()"
               [actionVariant]="'secondary'"

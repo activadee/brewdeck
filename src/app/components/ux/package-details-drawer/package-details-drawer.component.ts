@@ -32,6 +32,15 @@ export class PackageDetailsDrawerComponent {
   protected readonly detailsPinned = computed(() => this.packageDetailsStore.details()?.pinned ?? false);
   protected readonly detailsDeprecated = computed(() => this.packageDetailsStore.details()?.deprecated ?? false);
   protected readonly detailsDisabled = computed(() => this.packageDetailsStore.details()?.disabled ?? false);
+  protected readonly detailsDeprecationReason = computed(
+    () => this.packageDetailsStore.details()?.deprecationReason ?? null
+  );
+  protected readonly detailsDisableReason = computed(
+    () => this.packageDetailsStore.details()?.disableReason ?? null
+  );
+  protected readonly detailsReplacement = computed(
+    () => this.packageDetailsStore.details()?.replacement ?? null
+  );
   protected readonly detailsSource = computed(() => this.packageDetailsStore.details()?.source ?? null);
 
   @HostListener('document:keydown.escape')
@@ -43,6 +52,18 @@ export class PackageDetailsDrawerComponent {
 
   protected reload(): void {
     void this.packageDetailsStore.reload();
+  }
+
+  protected async openReplacementDetails(): Promise<void> {
+    const replacement = this.detailsReplacement();
+    if (!replacement) {
+      return;
+    }
+
+    await this.packageDetailsStore.openFor({
+      kind: replacement.kind,
+      name: replacement.name
+    });
   }
 
   protected formatInstalled(installedVersions: string[]): string {

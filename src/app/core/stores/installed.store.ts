@@ -11,6 +11,7 @@ import { BrewFacadeService } from '../services/brew-facade.service';
 
 type KindFilter = 'all' | PackageKind;
 type PinFilter = 'all' | 'pinned' | 'unpinned';
+export type LifecycleFilter = 'all' | 'healthy' | 'deprecated' | 'disabled';
 
 interface InstalledState {
   items: InstalledPackage[];
@@ -19,6 +20,7 @@ interface InstalledState {
   query: string;
   kindFilter: KindFilter;
   pinFilter: PinFilter;
+  lifecycleFilter: LifecycleFilter;
   lastRefreshedAt: string | null;
   pinning: boolean;
 }
@@ -30,6 +32,7 @@ const initialState: InstalledState = {
   query: '',
   kindFilter: 'all',
   pinFilter: 'all',
+  lifecycleFilter: 'all',
   lastRefreshedAt: null,
   pinning: false
 };
@@ -43,11 +46,17 @@ export const InstalledStore = signalStore(
     caskCount: computed(() => store.items().filter((item) => item.kind === 'cask').length),
     pinnedCount: computed(() => store.items().filter((item) => item.pinned).length),
     unpinnedCount: computed(() => store.items().filter((item) => !item.pinned).length),
+    disabledCount: computed(() => store.items().filter((item) => item.disabled).length),
+    deprecatedOnlyCount: computed(
+      () => store.items().filter((item) => !item.disabled && item.deprecated).length
+    ),
+    healthyCount: computed(() => store.items().filter((item) => !item.deprecated && !item.disabled).length),
     installedIdSet: computed(() => new Set(store.items().map((item) => item.id))),
     filteredItems: computed(() => {
       const query = store.query().trim().toLocaleLowerCase();
       const kindFilter = store.kindFilter();
       const pinFilter = store.pinFilter();
+      const lifecycleFilter = store.lifecycleFilter();
 
       return store.items().filter((item) => {
         if (kindFilter !== 'all' && item.kind !== kindFilter) {
@@ -62,13 +71,30 @@ export const InstalledStore = signalStore(
           return false;
         }
 
+        if (lifecycleFilter === 'healthy' && (item.deprecated || item.disabled)) {
+          return false;
+        }
+
+        if (lifecycleFilter === 'disabled' && !item.disabled) {
+          return false;
+        }
+
+        if (lifecycleFilter === 'deprecated' && (item.disabled || !item.deprecated)) {
+          return false;
+        }
+
         if (!query) {
           return true;
         }
 
-        return [item.name, item.desc ?? '', item.installedVersion].some((field) =>
-          field.toLocaleLowerCase().includes(query)
-        );
+        return [
+          item.name,
+          item.desc ?? '',
+          item.installedVersion,
+          item.deprecationReason ?? '',
+          item.disableReason ?? '',
+          item.replacement?.name ?? ''
+        ].some((field) => field.toLocaleLowerCase().includes(query));
       });
     })
   })),
@@ -83,6 +109,10 @@ export const InstalledStore = signalStore(
 
     setPinFilter(pinFilter: PinFilter): void {
       patchState(store, { pinFilter });
+    },
+
+    setLifecycleFilter(lifecycleFilter: LifecycleFilter): void {
+      patchState(store, { lifecycleFilter });
     },
 
     async refresh(): Promise<void> {

@@ -27,6 +27,7 @@ import type {
   PackageDependencyGroup,
   PackageDetails,
   PackageDetailsRequest,
+  PackageReplacement,
   PinOneRequest,
   ReinstallOneRequest,
   SearchCatalogRequest,
@@ -1269,6 +1270,9 @@ export class HomebrewService {
         },
         deprecated: localDetails.deprecated || remoteDetails.deprecated,
         disabled: localDetails.disabled || remoteDetails.disabled,
+        deprecationReason: preferString(localDetails.deprecationReason, remoteDetails.deprecationReason),
+        disableReason: preferString(localDetails.disableReason, remoteDetails.disableReason),
+        replacement: preferReplacement(localDetails.replacement, remoteDetails.replacement),
         pinned: localDetails.pinned,
         warnings: uniqueStrings([...localDetails.warnings, ...remoteDetails.warnings, ...warnings]),
         source: 'hybrid',
@@ -1606,6 +1610,7 @@ function normalizeFormulaDetails(
   source: PackageDetails['source'],
   warnings: string[]
 ): PackageDetails {
+  const lifecycle = normalizeLifecycleMetadata(raw, 'formula');
   const name = coerceName(raw, ['name'], fallbackName);
   const fullName = coerceName(raw, ['full_name', 'name'], name);
   const versions = isObject(raw.versions) ? raw.versions : {};
@@ -1631,8 +1636,11 @@ function normalizeFormulaDetails(
       stableVersion,
       headVersion
     },
-    deprecated: Boolean(raw.deprecated),
-    disabled: Boolean(raw.disabled),
+    deprecated: lifecycle.deprecated,
+    disabled: lifecycle.disabled,
+    deprecationReason: lifecycle.deprecationReason,
+    disableReason: lifecycle.disableReason,
+    replacement: lifecycle.replacement,
     pinned: Boolean(raw.pinned),
     warnings,
     source,
@@ -1646,6 +1654,7 @@ function normalizeCaskDetails(
   source: PackageDetails['source'],
   warnings: string[]
 ): PackageDetails {
+  const lifecycle = normalizeLifecycleMetadata(raw, 'cask');
   const name = coerceName(raw, ['token', 'full_token', 'name'], fallbackName);
   const fullName = coerceName(raw, ['full_token', 'token', 'name'], name);
   const stableVersion = readString(raw.version);
@@ -1668,13 +1677,88 @@ function normalizeCaskDetails(
       stableVersion,
       headVersion: null
     },
-    deprecated: Boolean(raw.deprecated),
-    disabled: Boolean(raw.disabled),
+    deprecated: lifecycle.deprecated,
+    disabled: lifecycle.disabled,
+    deprecationReason: lifecycle.deprecationReason,
+    disableReason: lifecycle.disableReason,
+    replacement: lifecycle.replacement,
     pinned: false,
     warnings,
     source,
     fetchedAt: new Date().toISOString()
   };
+}
+
+function normalizeLifecycleMetadata(
+  raw: Record<string, unknown>,
+  preferredKind: 'formula' | 'cask'
+): {
+  deprecated: boolean;
+  disabled: boolean;
+  deprecationReason: string | null;
+  disableReason: string | null;
+  replacement: PackageReplacement | null;
+} {
+  const deprecated = Boolean(raw.deprecated);
+  const disabled = Boolean(raw.disabled);
+  const deprecationReason = readString(raw.deprecation_reason);
+  const disableReason = readString(raw.disable_reason);
+
+  let replacement: PackageReplacement | null = null;
+  if (disabled) {
+    replacement =
+      resolveLifecycleReplacement(raw, preferredKind, 'disable')
+      ?? resolveLifecycleReplacement(raw, preferredKind, 'deprecation');
+  } else if (deprecated) {
+    replacement = resolveLifecycleReplacement(raw, preferredKind, 'deprecation');
+  }
+
+  return {
+    deprecated,
+    disabled,
+    deprecationReason,
+    disableReason,
+    replacement
+  };
+}
+
+function resolveLifecycleReplacement(
+  raw: Record<string, unknown>,
+  preferredKind: 'formula' | 'cask',
+  stage: 'deprecation' | 'disable'
+): PackageReplacement | null {
+  const formulaName = readString(raw[`${stage}_replacement_formula`]);
+  const caskName = readString(raw[`${stage}_replacement_cask`]);
+
+  if (preferredKind === 'formula' && formulaName) {
+    return {
+      kind: 'formula',
+      name: formulaName
+    };
+  }
+
+  if (preferredKind === 'cask' && caskName) {
+    return {
+      kind: 'cask',
+      name: caskName
+    };
+  }
+
+  if (formulaName) {
+    return {
+      kind: 'formula',
+      name: formulaName
+    };
+  }
+
+  if (caskName) {
+    return {
+      kind: 'cask',
+      name: caskName
+    };
+  }
+
+  return null;
 }
 
 function buildFormulaDependencyGroups(raw: Record<string, unknown>): PackageDependencyGroup[] {
@@ -1892,6 +1976,17 @@ function preferString(primary: string | null, secondary: string | null): string 
   }
 
   return null;
+}
+
+function preferReplacement(
+  primary: PackageReplacement | null,
+  secondary: PackageReplacement | null
+): PackageReplacement | null {
+  if (primary) {
+    return primary;
+  }
+
+  return secondary;
 }
 
 function mergeDependencyGroups(

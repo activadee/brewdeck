@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 
 import { ZardButtonComponent } from '@/shared/components/button';
+import { ZardCardComponent } from '@/shared/components/card';
 import type { InstalledPackage, ReinstallOneRequest } from '../../../../shared/contracts';
 import { EmptyStateComponent } from '../../../components/foundation/empty-state/empty-state.component';
 import { LoadingStateComponent } from '../../../components/foundation/loading-state/loading-state.component';
@@ -21,6 +22,7 @@ import { UpdatesStore } from '../../../core/stores/updates.store';
   selector: 'app-installed-packages-view',
   imports: [
     ZardButtonComponent,
+    ZardCardComponent,
     EmptyStateComponent,
     LoadingStateComponent,
     PackageFilterChipsComponent,
@@ -62,6 +64,12 @@ export class InstalledPackagesViewComponent {
     { value: 'all', label: 'All', count: this.installedStore.totalCount() },
     { value: 'pinned', label: 'Pinned', count: this.installedStore.pinnedCount() },
     { value: 'unpinned', label: 'Unpinned', count: this.installedStore.unpinnedCount() }
+  ]);
+  protected readonly lifecycleFilterOptions = computed(() => [
+    { value: 'all', label: 'All', count: this.installedStore.totalCount() },
+    { value: 'healthy', label: 'Healthy', count: this.installedStore.healthyCount() },
+    { value: 'deprecated', label: 'Deprecated', count: this.installedStore.deprecatedOnlyCount() },
+    { value: 'disabled', label: 'Disabled', count: this.installedStore.disabledCount() }
   ]);
   protected readonly uninstallDialogTitle = computed(() =>
     this.selectedPackage() ? `Uninstall ${this.selectedPackage()!.name}?` : 'Uninstall package?'
@@ -116,6 +124,10 @@ export class InstalledPackagesViewComponent {
     this.installedStore.setPinFilter(value as 'all' | 'pinned' | 'unpinned');
   }
 
+  protected onLifecycleFilterChange(value: string): void {
+    this.installedStore.setLifecycleFilter(value as 'all' | 'healthy' | 'deprecated' | 'disabled');
+  }
+
   protected openUninstallDialog(item: InstalledPackage): void {
     if (this.actionBusy()) {
       return;
@@ -142,8 +154,9 @@ export class InstalledPackagesViewComponent {
 
   protected overflowActionsFor(item: InstalledPackage): PackageRowOverflowAction[] {
     const busy = this.actionBusy();
+    const replacementAction = this.replacementOverflowAction(item);
     if (item.kind === 'cask') {
-      return [
+      const baseActions: PackageRowOverflowAction[] = [
         {
           id: 'view-details',
           label: 'View details'
@@ -159,9 +172,15 @@ export class InstalledPackagesViewComponent {
           disabled: true
         }
       ];
+
+      if (replacementAction) {
+        baseActions.splice(1, 0, replacementAction);
+      }
+
+      return baseActions;
     }
 
-    return item.pinned
+    const formulaActions = item.pinned
       ? [
           { id: 'view-details', label: 'View details' },
           { id: 'reinstall', label: 'Reinstall package', disabled: busy },
@@ -172,11 +191,25 @@ export class InstalledPackagesViewComponent {
           { id: 'reinstall', label: 'Reinstall package', disabled: busy },
           { id: 'pin', label: 'Pin formula', disabled: busy }
         ];
+
+    if (replacementAction) {
+      formulaActions.splice(1, 0, replacementAction);
+    }
+
+    return formulaActions;
   }
 
   protected async onOverflowAction(item: InstalledPackage, action: string): Promise<void> {
     if (action === 'view-details') {
       await this.packageDetailsStore.openFor({ kind: item.kind, name: item.name });
+      return;
+    }
+
+    if (action === 'view-replacement-details' && item.replacement) {
+      await this.packageDetailsStore.openFor({
+        kind: item.replacement.kind,
+        name: item.replacement.name
+      });
       return;
     }
 
@@ -209,6 +242,17 @@ export class InstalledPackagesViewComponent {
         this.toast.push(`Unpinned ${item.name}.`, 'success');
       }
     }
+  }
+
+  private replacementOverflowAction(item: InstalledPackage): PackageRowOverflowAction | null {
+    if (!item.replacement) {
+      return null;
+    }
+
+    return {
+      id: 'view-replacement-details',
+      label: `View replacement details (${item.replacement.name})`
+    };
   }
 
   protected openReinstallDialog(item: InstalledPackage): void {

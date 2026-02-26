@@ -88,6 +88,40 @@
                   </section>
                 }
 
+                @if (detailsDeprecated() || detailsDisabled() || detailsReplacement()) {
+                  <section class="fade-up space-y-2">
+                    <h4 class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Lifecycle</h4>
+
+                    @if (detailsDisabled()) {
+                      <p class="text-xs text-destructive">
+                        Disabled
+                        @if (detailsDisableReason(); as reason) {
+                          <span class="text-muted-foreground">({{ reason }})</span>
+                        }
+                      </p>
+                    } @else if (detailsDeprecated()) {
+                      <p class="text-xs text-amber-700">
+                        Deprecated
+                        @if (detailsDeprecationReason(); as reason) {
+                          <span class="text-muted-foreground">({{ reason }})</span>
+                        }
+                      </p>
+                    }
+
+                    @if (detailsReplacement(); as replacement) {
+                      <div class="space-y-1">
+                        <p class="text-xs text-foreground/90">
+                          Recommended replacement:
+                          <span class="mono">{{ replacement.kind }}/{{ replacement.name }}</span>
+                        </p>
+                        <button type="button" z-button zType="outline" zSize="sm" (click)="openReplacementDetails()">
+                          View replacement details
+                        </button>
+                      </div>
+                    }
+                  </section>
+                }
+
                 <section class="fade-up space-y-2">
                   <h4 class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Version snapshot</h4>
                   <div class="grid grid-cols-1 gap-2">

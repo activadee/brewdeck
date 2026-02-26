@@ -20,7 +20,12 @@ const formulaItem: InstalledPackage = {
   currentVersion: '14.1.0',
   pinned: false,
   tap: 'homebrew/core',
-  homepage: 'https://example.com/ripgrep'
+  homepage: 'https://example.com/ripgrep',
+  deprecated: false,
+  disabled: false,
+  deprecationReason: null,
+  disableReason: null,
+  replacement: null
 };
 
 const pinnedFormulaItem: InstalledPackage = {
@@ -39,7 +44,21 @@ const caskItem: InstalledPackage = {
   currentVersion: '1.97.0',
   pinned: false,
   tap: 'homebrew/cask',
-  homepage: 'https://example.com/vscode'
+  homepage: 'https://example.com/vscode',
+  deprecated: false,
+  disabled: false,
+  deprecationReason: null,
+  disableReason: null,
+  replacement: null
+};
+
+const deprecatedItem: InstalledPackage = {
+  ...formulaItem,
+  id: 'formula:aftman',
+  name: 'aftman',
+  deprecated: true,
+  deprecationReason: 'repo_archived',
+  replacement: { kind: 'formula', name: 'mise' }
 };
 
 function createInstalledStore(items: InstalledPackage[]) {
@@ -50,13 +69,18 @@ function createInstalledStore(items: InstalledPackage[]) {
     query: signal(''),
     kindFilter: signal<'all' | 'formula' | 'cask'>('all'),
     pinFilter: signal<'all' | 'pinned' | 'unpinned'>('all'),
+    lifecycleFilter: signal<'all' | 'healthy' | 'deprecated' | 'disabled'>('all'),
     pinning: signal(false),
     totalCount: signal(items.length),
     pinnedCount: signal(items.filter((item) => item.pinned).length),
     unpinnedCount: signal(items.filter((item) => !item.pinned).length),
+    healthyCount: signal(items.filter((item) => !item.deprecated && !item.disabled).length),
+    deprecatedOnlyCount: signal(items.filter((item) => item.deprecated && !item.disabled).length),
+    disabledCount: signal(items.filter((item) => item.disabled).length),
     setQuery: vi.fn(),
     setKindFilter: vi.fn(),
     setPinFilter: vi.fn(),
+    setLifecycleFilter: vi.fn(),
     refresh: vi.fn(async () => undefined),
     pinOne: vi.fn(async () => true),
     unpinOne: vi.fn(async () => true)
@@ -237,6 +261,30 @@ describe('InstalledPackagesViewComponent', () => {
     expect(packageDetailsStore.openFor).toHaveBeenCalledWith({
       kind: 'formula',
       name: 'ripgrep'
+    });
+  });
+
+  it('shows replacement overflow action when recommendation exists', async () => {
+    const { fixture } = await render([deprecatedItem]);
+    const component = fixture.componentInstance as any;
+
+    expect(component.overflowActionsFor(deprecatedItem)).toEqual([
+      { id: 'view-details', label: 'View details' },
+      { id: 'view-replacement-details', label: 'View replacement details (mise)' },
+      { id: 'reinstall', label: 'Reinstall package', disabled: false },
+      { id: 'pin', label: 'Pin formula', disabled: false }
+    ]);
+  });
+
+  it('opens replacement details from overflow action', async () => {
+    const { fixture, packageDetailsStore } = await render([deprecatedItem]);
+    const component = fixture.componentInstance as any;
+
+    await component.onOverflowAction(deprecatedItem, 'view-replacement-details');
+
+    expect(packageDetailsStore.openFor).toHaveBeenCalledWith({
+      kind: 'formula',
+      name: 'mise'
     });
   });
 

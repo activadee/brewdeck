@@ -4,6 +4,11 @@
       @if (pinned()) {
         <z-badge zType="secondary" zShape="pill" class="mono text-[10px] uppercase">pinned</z-badge>
       }
+      @if (disabled()) {
+        <z-badge zType="destructive" zShape="pill" class="mono text-[10px] uppercase">disabled</z-badge>
+      } @else if (deprecated()) {
+        <z-badge zType="outline" zShape="pill" class="mono text-[10px] uppercase">deprecated</z-badge>
+      }
       @if (installedVersion()) {
         <z-badge zType="outline" zShape="pill" class="mono text-[10px]">installed {{ installedVersion() }}</z-badge>
       }
@@ -12,6 +17,11 @@
       }
       @if (tap()) {
         <span class="mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">{{ tap() }}</span>
+      }
+      @if (replacement(); as replacementTarget) {
+        <span class="mono text-[10px] uppercase tracking-[0.08em] text-amber-700">
+          replacement {{ replacementTarget.kind }}/{{ replacementTarget.name }}
+        </span>
       }
     </div>
   
