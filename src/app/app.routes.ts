@@ -9,6 +9,7 @@ import { TrayPopoverComponent } from './features/tray/tray-popover/tray-popover.
 import { UpdatesViewComponent } from './features/updates/updates-view/updates-view.component';
 import { AppShellComponent } from './layout/app-shell/app-shell.component';
 import { CleanupViewComponent } from './features/cleanup/cleanup-view/cleanup-view.component';
+import { DoctorViewComponent } from './features/doctor/doctor-view/doctor-view.component';
 
 export const routes: Routes = [
   {
@@ -24,6 +25,7 @@ export const routes: Routes = [
       { path: 'browse', component: BrowseCatalogViewComponent },
       { path: 'taps', component: TapsViewComponent },
       { path: 'cleanup', component: CleanupViewComponent },
+      { path: 'doctor', component: DoctorViewComponent },
       { path: 'services', component: ServicesViewComponent },
       { path: 'settings', component: SettingsViewComponent },
       { path: '', pathMatch: 'full', redirectTo: 'updates' }

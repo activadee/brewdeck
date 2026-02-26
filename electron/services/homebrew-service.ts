@@ -4,6 +4,9 @@ import { stat } from 'node:fs/promises';
 
 import type {
   BrewAvailability,
+  BrewDoctorFinding,
+  BrewDoctorResult,
+  BrewDoctorSeverity,
   BrewJobAction,
   BrewJobCompleteEvent,
   BrewJobFailedEvent,
@@ -54,6 +57,7 @@ const DETAILS_TTL_MS = 10 * 60 * 1000;
 const TAP_READ_TIMEOUT_MS = 30_000;
 const CLEANUP_PREVIEW_TIMEOUT_MS = 10 * 60 * 1000;
 const CLEANUP_RUN_TIMEOUT_MS = 30 * 60 * 1000;
+const DOCTOR_RUN_TIMEOUT_MS = 10 * 60 * 1000;
 const SERVICES_MUTATION_TIMEOUT_MS = 5 * 60 * 1000;
 const PROTECTED_TAP_NAMES = new Set(['homebrew/core', 'homebrew/cask']);
 const PROTECTED_TAP_ALIASES = new Map<string, string>([
@@ -651,6 +655,125 @@ export class HomebrewService {
       runningMessage: 'Running Homebrew cleanup',
       sink
     });
+  }
+
+  async runDoctor(sink: JobEventSink): Promise<BrewDoctorResult> {
+    const command = ['doctor'];
+    const commandText = 'brew doctor';
+    const target: TrackedJobTarget = {
+      packageName: null,
+      kind: 'system'
+    };
+    const action: BrewJobAction = 'doctor';
+    const jobId = randomUUID();
+    const startedAt = Date.now();
+    let combinedOutput = '';
+
+    this.emitProgress({
+      sink,
+      jobId,
+      action,
+      command: commandText,
+      stage: 'queued',
+      stream: 'system',
+      target,
+      message: 'Queued brew doctor diagnostics'
+    });
+
+    return this.mutationQueue.enqueue(
+      async (signal) => {
+        this.emitProgress({
+          sink,
+          jobId,
+          action,
+          command: commandText,
+          stage: 'running',
+          stream: 'system',
+          target,
+          message: 'Running brew doctor diagnostics'
+        });
+
+        try {
+          const result = await this.runner.runText(command, {
+            signal,
+            timeoutMs: DOCTOR_RUN_TIMEOUT_MS,
+            onStdout: (chunk) => {
+              combinedOutput += chunk;
+              this.emitProgress({
+                sink,
+                jobId,
+                action,
+                command: commandText,
+                stage: 'output',
+                stream: 'stdout',
+                target,
+                message: chunk
+              });
+            },
+            onStderr: (chunk) => {
+              combinedOutput += chunk;
+              this.emitProgress({
+                sink,
+                jobId,
+                action,
+                command: commandText,
+                stage: 'output',
+                stream: 'stderr',
+                target,
+                message: chunk
+              });
+            }
+          });
+
+          const output = `${result.stdout}${result.stderr}`.trim() || combinedOutput.trim();
+          const report = parseDoctorOutput(output, commandText, result.exitCode);
+          const complete = this.buildCompleteEvent({
+            jobId,
+            action,
+            command: commandText,
+            target,
+            startedAt,
+            output,
+            exitCode: result.exitCode
+          });
+          sink.onComplete(complete);
+          return report;
+        } catch (error) {
+          if (error instanceof BrewCommandError && error.exitCode === 1) {
+            const output = `${error.stdout}${error.stderr}`.trim() || combinedOutput.trim();
+            const report = parseDoctorOutput(output, commandText, error.exitCode);
+            if (isDoctorOutputParseable(report, output)) {
+              const complete = this.buildCompleteEvent({
+                jobId,
+                action,
+                command: commandText,
+                target,
+                startedAt,
+                output,
+                exitCode: error.exitCode
+              });
+              sink.onComplete(complete);
+              return report;
+            }
+          }
+
+          const structured = this.extractStructuredError(error, commandText, combinedOutput);
+          const failed = this.buildFailedEvent({
+            jobId,
+            action,
+            command: commandText,
+            target,
+            startedAt,
+            error: structured.message,
+            output: structured.output,
+            exitCode: structured.exitCode
+          });
+          sink.onFailed(failed);
+          throw error;
+        }
+      },
+      DOCTOR_RUN_TIMEOUT_MS
+    );
   }
 
   async upgradeAll(sink: JobEventSink): Promise<BrewJobCompleteEvent> {
@@ -1796,6 +1919,148 @@ function mergeDependencyGroups(
   }
 
   return Array.from(grouped.values());
+}
+
+function parseDoctorOutput(rawOutput: string, command: string, exitCode: number): BrewDoctorResult {
+  const findings: BrewDoctorFinding[] = [];
+  const infoLines: string[] = [];
+  let current: {
+    severity: BrewDoctorSeverity;
+    title: string;
+    details: string[];
+  } | null = null;
+
+  const flushCurrent = (): void => {
+    if (!current) {
+      return;
+    }
+
+    findings.push({
+      id: `${current.severity}-${findings.length + 1}`,
+      severity: current.severity,
+      title: current.title,
+      details: [...current.details],
+      suggestedFix: extractDoctorSuggestedFix(current.title, current.details)
+    });
+    current = null;
+  };
+
+  for (const line of rawOutput.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0) {
+      continue;
+    }
+
+    const findingMatch = trimmed.match(/^(Warning|Error):\s*(.+)$/i);
+    if (findingMatch) {
+      flushCurrent();
+      current = {
+        severity: (findingMatch[1] ?? '').toLocaleLowerCase() === 'error' ? 'error' : 'warning',
+        title: findingMatch[2]?.trim() || 'Homebrew doctor finding',
+        details: []
+      };
+      continue;
+    }
+
+    if (current) {
+      current.details.push(trimmed);
+      continue;
+    }
+
+    if (!shouldIgnoreDoctorPreambleLine(trimmed)) {
+      infoLines.push(trimmed);
+    }
+  }
+
+  flushCurrent();
+
+  const meaningfulInfoLines = infoLines.filter((line) => !isDoctorHealthyLine(line));
+  if (meaningfulInfoLines.length > 0) {
+    findings.push({
+      id: `info-${findings.length + 1}`,
+      severity: 'info',
+      title: meaningfulInfoLines[0] ?? 'Homebrew doctor output',
+      details: meaningfulInfoLines.slice(1),
+      suggestedFix: extractDoctorSuggestedFix(meaningfulInfoLines[0] ?? '', meaningfulInfoLines.slice(1))
+    });
+  }
+
+  const counts = findings.reduce(
+    (summary, finding) => {
+      summary[finding.severity] += 1;
+      return summary;
+    },
+    {
+      error: 0,
+      warning: 0,
+      info: 0
+    }
+  );
+
+  return {
+    command,
+    exitCode,
+    findings,
+    counts,
+    rawOutput,
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function isDoctorOutputParseable(report: BrewDoctorResult, rawOutput: string): boolean {
+  if (report.findings.some((finding) => finding.severity === 'warning' || finding.severity === 'error')) {
+    return true;
+  }
+
+  const normalized = rawOutput.trim().toLocaleLowerCase();
+  if (normalized.length === 0) {
+    return true;
+  }
+
+  return normalized.includes('your system is ready to brew')
+    || normalized.includes('please note that these warnings are just used');
+}
+
+function extractDoctorSuggestedFix(title: string, details: string[]): string | null {
+  const candidates = [...details, title];
+  for (const line of candidates) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    if (/`[^`]+`/.test(trimmed)) {
+      return trimmed;
+    }
+
+    if (
+      /^(run|untap|tap|brew|remove|delete|reinstall|install|uninstall|update|fix|set|use)\b/i.test(trimmed)
+    ) {
+      return trimmed;
+    }
+
+    if (/(you should|please|consider|find replacements|untap them)/i.test(trimmed)) {
+      return trimmed;
+    }
+  }
+
+  return null;
+}
+
+function shouldIgnoreDoctorPreambleLine(line: string): boolean {
+  const normalized = line.toLocaleLowerCase();
+
+  return normalized.startsWith('please note that these warnings are just used')
+    || normalized.includes('with debugging if you file an issue')
+    || normalized.includes("working fine: please don't worry")
+    || normalized.includes('working fine: please dont worry')
+    || normalized === 'just ignore this. thanks!';
+}
+
+function isDoctorHealthyLine(line: string): boolean {
+  const normalized = line.trim().toLocaleLowerCase();
+  return normalized === 'your system is ready to brew.'
+    || normalized === 'your system is ready to brew';
 }
 
 function parseCleanupPreviewOutput(rawOutput: string, command: string): CleanupPreviewResult {

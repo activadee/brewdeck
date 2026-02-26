@@ -26,6 +26,7 @@ describe('IPC channel allowlist', () => {
     expect(channels).toContain('brew:serviceRestart');
     expect(channels).toContain('brew:cleanupPreview');
     expect(channels).toContain('brew:cleanupRun');
+    expect(channels).toContain('brew:doctorRun');
     expect(channels).toContain('brew:upgradeOne');
     expect(channels).toContain('brew:upgradeAll');
     expect(channels).toContain('brew:checkNow');

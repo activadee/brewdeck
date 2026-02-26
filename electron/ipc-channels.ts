@@ -21,6 +21,7 @@ export const IPC_CHANNELS = {
   SERVICE_RESTART: 'brew:serviceRestart',
   CLEANUP_PREVIEW: 'brew:cleanupPreview',
   CLEANUP_RUN: 'brew:cleanupRun',
+  DOCTOR_RUN: 'brew:doctorRun',
   UPGRADE_ONE: 'brew:upgradeOne',
   UPGRADE_ALL: 'brew:upgradeAll',
   CHECK_NOW: 'brew:checkNow',

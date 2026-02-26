@@ -25,6 +25,13 @@ describe('BrewBridgeService fallback bridge', () => {
       await expect(service.api.getCleanupPreview()).resolves.toMatchObject({
         command: 'brew cleanup --dry-run'
       });
+      await expect(service.api.runDoctor()).resolves.toMatchObject({
+        command: 'brew doctor',
+        findings: [],
+        counts: {
+          warning: 0
+        }
+      });
       await expect(service.api.tapAdd({ name: 'sst/tap' })).resolves.toMatchObject({
         success: false,
         action: 'tapAdd'

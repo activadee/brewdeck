@@ -297,6 +297,36 @@ export const cleanupPreviewResultSchema = z.object({
 });
 export type CleanupPreviewResult = z.infer<typeof cleanupPreviewResultSchema>;
 
+export const brewDoctorSeveritySchema = z.union([
+  z.literal('error'),
+  z.literal('warning'),
+  z.literal('info')
+]);
+export type BrewDoctorSeverity = z.infer<typeof brewDoctorSeveritySchema>;
+
+export const brewDoctorFindingSchema = z.object({
+  id: z.string().min(1),
+  severity: brewDoctorSeveritySchema,
+  title: z.string().min(1),
+  details: z.array(z.string()),
+  suggestedFix: z.string().nullable()
+});
+export type BrewDoctorFinding = z.infer<typeof brewDoctorFindingSchema>;
+
+export const brewDoctorResultSchema = z.object({
+  command: z.string().min(1),
+  exitCode: z.number().int(),
+  findings: z.array(brewDoctorFindingSchema),
+  counts: z.object({
+    error: z.number().int().nonnegative(),
+    warning: z.number().int().nonnegative(),
+    info: z.number().int().nonnegative()
+  }),
+  rawOutput: z.string(),
+  generatedAt: z.string()
+});
+export type BrewDoctorResult = z.infer<typeof brewDoctorResultSchema>;
+
 export const syncMetadataResultSchema = z.object({
   success: z.boolean(),
   output: z.string(),
@@ -356,6 +386,7 @@ export const brewJobActionSchema = z.union([
   z.literal('upgradeOne'),
   z.literal('upgradeAll'),
   z.literal('cleanup'),
+  z.literal('doctor'),
   z.literal('pin'),
   z.literal('unpin'),
   z.literal('tapAdd'),
@@ -440,6 +471,7 @@ export interface BrewGuiBridge {
   getTaps(): Promise<GetTapsResponse>;
   getServices(): Promise<GetServicesResponse>;
   getCleanupPreview(): Promise<CleanupPreviewResult>;
+  runDoctor(): Promise<BrewDoctorResult>;
   getPackageDetails(request: PackageDetailsRequest): Promise<PackageDetails>;
   searchCatalog(request: SearchCatalogRequest): Promise<SearchCatalogResponse>;
   installOne(request: InstallOneRequest): Promise<BrewJobCompleteEvent>;

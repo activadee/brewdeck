@@ -32,6 +32,7 @@ export class SidebarNavComponent {
     { label: 'Taps', route: '/taps' },
     { label: 'Cleanup', route: '/cleanup' },
     { label: 'Services', route: '/services' },
+    { label: 'Doctor', route: '/doctor' },
     { label: 'Settings', route: '/settings' }
   ];
 }

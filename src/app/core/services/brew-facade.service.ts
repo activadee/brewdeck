@@ -4,6 +4,7 @@ import type {
   AppSettings,
   AppSettingsUpdate,
   BrewAvailability,
+  BrewDoctorResult,
   BrewJobCompleteEvent,
   BrewJobFailedEvent,
   BrewJobProgressEvent,
@@ -74,6 +75,10 @@ export class BrewFacadeService {
 
   getCleanupPreview(): Promise<CleanupPreviewResult> {
     return this.bridge.api.getCleanupPreview();
+  }
+
+  runDoctor(): Promise<BrewDoctorResult> {
+    return this.bridge.api.runDoctor();
   }
 
   getPackageDetails(request: PackageDetailsRequest): Promise<PackageDetails> {

@@ -1,0 +1,110 @@
+<section class="ui-shell-enter space-y-2">
+  <header class="flex flex-wrap items-center justify-between gap-2">
+    <div>
+      <h2 class="text-lg font-semibold">Doctor Diagnostics</h2>
+      <p class="mt-1 text-xs text-muted-foreground">
+        Run <span class="mono">brew doctor</span> and review findings grouped by severity.
+      </p>
+    </div>
+
+    <div class="flex gap-1.5">
+      <button type="button" z-button zType="outline" zSize="sm" (click)="runDiagnostics()" [zDisabled]="busy()">
+        Refresh
+      </button>
+      <button type="button" z-button zSize="sm" (click)="runDiagnostics()" [zDisabled]="busy()">
+        {{ busy() ? 'Running…' : 'Run diagnostics' }}
+      </button>
+    </div>
+  </header>
+
+  <z-card class="border-border/70 bg-card/95 shadow-sm">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div class="space-y-1">
+        <p class="text-xs text-muted-foreground uppercase tracking-[0.1em]">Last doctor run</p>
+        <p class="mono text-sm font-medium">{{ generatedLabel() }}</p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-1.5">
+        <z-badge zType="destructive" zShape="pill" class="mono text-[10px] uppercase">errors {{ doctorStore.counts().error }}</z-badge>
+        <z-badge zType="outline" zShape="pill" class="mono text-[10px] uppercase">warnings {{ doctorStore.counts().warning }}</z-badge>
+        <z-badge zType="secondary" zShape="pill" class="mono text-[10px] uppercase">info {{ doctorStore.counts().info }}</z-badge>
+      </div>
+    </div>
+  </z-card>
+
+  <app-package-search-input
+    [value]="doctorStore.query()"
+    placeholder="Search finding titles, details, and suggested fixes"
+    (valueChange)="doctorStore.setQuery($event)"
+  />
+
+  <app-package-filter-chips
+    [selected]="doctorStore.severityFilter()"
+    [options]="severityFilterOptions()"
+    (selectedChange)="onSeverityFilterChange($event)"
+  />
+
+  @if (doctorStore.loading() && !doctorStore.hasReport()) {
+    <app-loading-state label="Running Homebrew doctor…" />
+  } @else if (doctorStore.error() && !doctorStore.hasReport()) {
+    <app-empty-state label="Doctor diagnostics failed" [description]="doctorStore.error() ?? ''" />
+  } @else if (doctorStore.filteredFindings().length === 0) {
+    @if (doctorStore.findings().length === 0) {
+      <app-empty-state label="No doctor findings" description="Homebrew doctor did not report any warnings or errors." />
+    } @else {
+      <app-empty-state label="No matching findings" description="No doctor findings match the current filters." />
+    }
+  } @else {
+    <div class="space-y-2">
+      @for (severity of severityOrder; track severity) {
+        @if (findingsForSeverity(severity).length > 0) {
+          <z-card class="border-border/70 bg-card/95 shadow-sm">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-sm font-semibold">{{ severityLabel(severity) }}</p>
+                <z-badge [zType]="severityBadgeType(severity)" zShape="pill" class="mono text-[10px] uppercase">
+                  {{ findingsForSeverity(severity).length }}
+                </z-badge>
+              </div>
+
+              <div class="space-y-1.5">
+                @for (finding of findingsForSeverity(severity); track finding.id) {
+                  <article class="rounded-md border border-border/70 bg-muted/20 p-2">
+                    <p class="text-sm font-medium">{{ finding.title }}</p>
+
+                    @if (finding.suggestedFix) {
+                      <p class="mt-1 text-xs text-foreground/90">
+                        Suggested fix: <span class="mono">{{ finding.suggestedFix }}</span>
+                      </p>
+                    }
+
+                    @if (finding.details.length > 0) {
+                      <div class="mt-1.5 space-y-0.5">
+                        @for (line of finding.details; track $index) {
+                          <p class="mono text-[11px] text-muted-foreground">{{ line }}</p>
+                        }
+                      </div>
+                    }
+                  </article>
+                }
+              </div>
+            </div>
+          </z-card>
+        }
+      }
+    </div>
+  }
+
+  @if (doctorStore.hasReport()) {
+    <details class="rounded-md border border-border/70 bg-card/95">
+      <summary class="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">Raw doctor output</summary>
+      <div class="px-3 pb-3">
+        <pre class="max-h-64 overflow-auto rounded-md border border-border bg-muted/40 p-2 text-[11px] mono whitespace-pre-wrap">{{ doctorStore.rawOutput() || 'No output captured.' }}</pre>
+      </div>
+    </details>
+  }
+
+  @if (doctorStore.error() && doctorStore.hasReport()) {
+    <p class="text-sm text-destructive">{{ doctorStore.error() }}</p>
+  }
+</section>

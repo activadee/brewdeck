@@ -50,6 +50,7 @@ describe('CommandProgressDrawerComponent', () => {
         | 'serviceStart'
         | 'serviceStop'
         | 'serviceRestart'
+        | 'doctor'
         | 'syncMetadata'
       >('all'),
       kindFilter: signal<'all' | 'formula' | 'cask' | 'system'>('all'),
@@ -92,11 +93,11 @@ describe('CommandProgressDrawerComponent', () => {
     const component = fixture.componentInstance as any;
 
     component.onStatusFilterChange('failed');
-    component.onActionFilterChange('serviceRestart');
+    component.onActionFilterChange('doctor');
     component.onKindFilterChange('system');
 
     expect(store.setStatusFilter).toHaveBeenCalledWith('failed');
-    expect(store.setActionFilter).toHaveBeenCalledWith('serviceRestart');
+    expect(store.setActionFilter).toHaveBeenCalledWith('doctor');
     expect(store.setKindFilter).toHaveBeenCalledWith('system');
   });
 

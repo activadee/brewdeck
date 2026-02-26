@@ -11,6 +11,7 @@ import {
   unpinOneRequestSchema,
   uninstallOneRequestSchema,
   appSettingsUpdateSchema,
+  brewDoctorResultSchema,
   checkNowResultSchema,
   cleanupPreviewResultSchema,
   searchCatalogRequestSchema,
@@ -83,6 +84,15 @@ export function registerIpcHandlers(options: RegisterIpcOptions): void {
   ipcMain.handle(IPC_CHANNELS.GET_SERVICES, async () => homebrew.getServices());
   ipcMain.handle(IPC_CHANNELS.CLEANUP_PREVIEW, async () =>
     cleanupPreviewResultSchema.parse(await homebrew.getCleanupPreview())
+  );
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_RUN, async () =>
+    brewDoctorResultSchema.parse(
+      await homebrew.runDoctor({
+        onProgress: emitJobProgress,
+        onComplete: emitJobComplete,
+        onFailed: emitJobFailed
+      })
+    )
   );
   ipcMain.handle(IPC_CHANNELS.GET_PACKAGE_DETAILS, async (_event, payload) => {
     const parsed = packageDetailsRequestSchema.parse(payload);

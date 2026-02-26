@@ -27,4 +27,17 @@ describe('SidebarNavComponent', () => {
     const html = fixture.nativeElement as HTMLElement;
     expect(html.textContent).toContain('Services');
   });
+
+  it('includes doctor navigation entry', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SidebarNavComponent],
+      providers: [provideRouter([])]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(SidebarNavComponent);
+    fixture.detectChanges();
+
+    const html = fixture.nativeElement as HTMLElement;
+    expect(html.textContent).toContain('Doctor');
+  });
 });

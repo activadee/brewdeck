@@ -73,6 +73,7 @@ describe('AppShellComponent titlebar', () => {
         | 'serviceStart'
         | 'serviceStop'
         | 'serviceRestart'
+        | 'doctor'
         | 'syncMetadata'
       >('all'),
       kindFilter: signal<'all' | 'formula' | 'cask' | 'system'>('all'),
@@ -128,6 +129,7 @@ describe('AppShellComponent titlebar', () => {
           { path: 'taps', component: DummyRouteComponent },
           { path: 'cleanup', component: DummyRouteComponent },
           { path: 'services', component: DummyRouteComponent },
+          { path: 'doctor', component: DummyRouteComponent },
           { path: 'settings', component: DummyRouteComponent },
           { path: '', pathMatch: 'full', redirectTo: 'updates' }
         ]),
@@ -229,6 +231,23 @@ describe('AppShellComponent titlebar', () => {
       option.textContent?.includes('Go to Services')
     );
     expect(servicesAction).toBeTruthy();
+  });
+
+  it('includes doctor navigation action in command palette', async () => {
+    const { fixture } = await render();
+    const html = fixture.nativeElement as HTMLElement;
+
+    const paletteButton = html.querySelector(
+      '[data-testid="titlebar-palette"]'
+    ) as HTMLButtonElement | null;
+
+    paletteButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    const doctorAction = Array.from(html.querySelectorAll('[role="option"]')).find((option) =>
+      option.textContent?.includes('Go to Doctor')
+    );
+    expect(doctorAction).toBeTruthy();
   });
 
   it('suppresses global toast for sync metadata job failures', async () => {

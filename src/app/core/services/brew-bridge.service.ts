@@ -6,6 +6,7 @@ import {
   type AppSettings,
   type AppSettingsUpdate,
   type BrewGuiBridge,
+  type BrewDoctorResult,
   type BrewJobAction,
   type BrewJobCompleteEvent,
   type BrewJobFailedEvent,
@@ -89,6 +90,20 @@ const createFallbackBridge = (): BrewGuiBridge => ({
       command: 'brew cleanup --dry-run',
       items: [],
       totalBytes: null,
+      rawOutput: 'Electron bridge unavailable',
+      generatedAt: new Date().toISOString()
+    };
+  },
+  async runDoctor(): Promise<BrewDoctorResult> {
+    return {
+      command: 'brew doctor',
+      exitCode: -1,
+      findings: [],
+      counts: {
+        error: 0,
+        warning: 0,
+        info: 0
+      },
       rawOutput: 'Electron bridge unavailable',
       generatedAt: new Date().toISOString()
     };

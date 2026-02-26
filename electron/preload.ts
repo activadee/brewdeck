@@ -4,6 +4,7 @@ import {
   appSettingsSchema,
   appSettingsUpdateSchema,
   brewAvailabilitySchema,
+  brewDoctorResultSchema,
   brewJobCompleteEventSchema,
   brewJobFailedEventSchema,
   brewJobProgressEventSchema,
@@ -78,6 +79,11 @@ const api: BrewGuiBridge = {
   async getCleanupPreview() {
     const payload = await ipcRenderer.invoke(IPC_CHANNELS.CLEANUP_PREVIEW);
     return cleanupPreviewResultSchema.parse(payload);
+  },
+
+  async runDoctor() {
+    const payload = await ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_RUN);
+    return brewDoctorResultSchema.parse(payload);
   },
 
   async getPackageDetails(request) {

@@ -1205,6 +1205,191 @@ describe('HomebrewService.upgradeAll', () => {
   });
 });
 
+describe('HomebrewService.runDoctor', () => {
+  it('parses warning diagnostics from exit-code 1 output and emits completion metadata', async () => {
+    const service = new HomebrewService() as any;
+    const diagnosticOutput = [
+      'Please note that these warnings are just used to help the Homebrew maintainers',
+      'with debugging if you file an issue. If everything you use Homebrew for is',
+      "working fine: please don't worry or file an issue; just ignore this. Thanks!",
+      '',
+      'Warning: Some installed casks are deprecated or disabled.',
+      'You should find replacements for the following casks:',
+      '  powershell',
+      '',
+      'Warning: You have the following deprecated, official taps tapped:',
+      '  Homebrew/homebrew-services',
+      'Untap them with `brew untap`.'
+    ].join('\n');
+    const runText = vi.fn(async () => {
+      throw new BrewCommandError('brew doctor reported warnings', {
+        command: ['doctor'],
+        exitCode: 1,
+        stdout: diagnosticOutput,
+        stderr: ''
+      });
+    });
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+    const onComplete = vi.fn();
+    const onFailed = vi.fn();
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    const result = await service.runDoctor({
+      onProgress: () => undefined,
+      onComplete,
+      onFailed
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.counts.warning).toBe(2);
+    expect(result.findings[1]?.suggestedFix).toContain('brew untap');
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(onComplete.mock.calls[0]?.[0]).toMatchObject({
+      action: 'doctor',
+      command: 'brew doctor',
+      kind: 'system',
+      exitCode: 1
+    });
+    expect(onFailed).not.toHaveBeenCalled();
+  });
+
+  it('returns zero findings for healthy doctor output', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => ({
+      stdout: 'Your system is ready to brew.\n',
+      stderr: '',
+      exitCode: 0
+    }));
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    const result = await service.runDoctor({
+      onProgress: () => undefined,
+      onComplete: () => undefined,
+      onFailed: () => undefined
+    });
+
+    expect(result.counts).toEqual({
+      error: 0,
+      warning: 0,
+      info: 0
+    });
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it('emits structured failed events when doctor command fails with non-diagnostic output', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => {
+      throw new BrewCommandError('brew doctor failed', {
+        command: ['doctor'],
+        exitCode: 2,
+        stdout: '',
+        stderr: 'fatal: doctor command failed'
+      });
+    });
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+    const onFailed = vi.fn();
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    await expect(
+      service.runDoctor({
+        onProgress: () => undefined,
+        onComplete: () => undefined,
+        onFailed
+      })
+    ).rejects.toThrow();
+
+    expect(onFailed).toHaveBeenCalledTimes(1);
+    expect(onFailed.mock.calls[0]?.[0]).toMatchObject({
+      action: 'doctor',
+      command: 'brew doctor',
+      kind: 'system',
+      exitCode: 2
+    });
+  });
+
+  it('does not treat info-only exit-code 1 output as parseable diagnostics', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => {
+      throw new BrewCommandError('brew doctor failed', {
+        command: ['doctor'],
+        exitCode: 1,
+        stdout: 'fatal: doctor command failed',
+        stderr: ''
+      });
+    });
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+    const onComplete = vi.fn();
+    const onFailed = vi.fn();
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    await expect(
+      service.runDoctor({
+        onProgress: () => undefined,
+        onComplete,
+        onFailed
+      })
+    ).rejects.toThrow();
+
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(onFailed).toHaveBeenCalledTimes(1);
+    expect(onFailed.mock.calls[0]?.[0]).toMatchObject({
+      action: 'doctor',
+      command: 'brew doctor',
+      kind: 'system',
+      exitCode: 1
+    });
+  });
+
+  it('emits queued, running, and output progress events for doctor runs', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async (_command: string[], options: { onStdout?: (chunk: string) => void }) => {
+      options.onStdout?.('Checking...\n');
+      return {
+        stdout: 'Your system is ready to brew.\n',
+        stderr: '',
+        exitCode: 0
+      };
+    });
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+    const onProgress = vi.fn();
+    const onComplete = vi.fn();
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    await service.runDoctor({
+      onProgress,
+      onComplete,
+      onFailed: () => undefined
+    });
+
+    const stages = onProgress.mock.calls.map((call) => call[0].stage);
+    expect(stages).toContain('queued');
+    expect(stages).toContain('running');
+    expect(stages).toContain('output');
+    expect(onComplete.mock.calls[0]?.[0].action).toBe('doctor');
+  });
+});
+
 describe('HomebrewService.syncMetadata', () => {
   it('runs sync metadata on the mutation queue and emits structured job events', async () => {
     const service = new HomebrewService() as any;

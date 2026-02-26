@@ -40,6 +40,7 @@ export class CommandProgressDrawerComponent {
     { value: 'upgradeOne', label: 'Upgrade one' },
     { value: 'upgradeAll', label: 'Upgrade all' },
     { value: 'cleanup', label: 'Cleanup' },
+    { value: 'doctor', label: 'Doctor' },
     { value: 'pin', label: 'Pin' },
     { value: 'unpin', label: 'Unpin' },
     { value: 'tapAdd', label: 'Tap add' },
@@ -83,6 +84,8 @@ export class CommandProgressDrawerComponent {
         return 'Upgrade all';
       case 'cleanup':
         return 'Cleanup';
+      case 'doctor':
+        return 'Doctor diagnostics';
       case 'pin':
         return 'Pin formula';
       case 'unpin':

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  brewDoctorFindingSchema,
+  brewDoctorResultSchema,
   brewJobCompleteEventSchema,
   brewJobFailedEventSchema,
   brewJobProgressEventSchema,
@@ -160,6 +162,48 @@ describe('window chrome contracts', () => {
     expect(parsed.totalBytes).toBe(237);
   });
 
+  it('parses doctor diagnostics payloads', () => {
+    const parsed = brewDoctorResultSchema.parse({
+      command: 'brew doctor',
+      exitCode: 1,
+      findings: [
+        {
+          id: 'warning-1',
+          severity: 'warning',
+          title: 'Some installed casks are deprecated or disabled.',
+          details: [
+            'You should find replacements for the following casks:',
+            'powershell'
+          ],
+          suggestedFix: 'You should find replacements for the following casks:'
+        }
+      ],
+      counts: {
+        error: 0,
+        warning: 1,
+        info: 0
+      },
+      rawOutput: 'Warning: Some installed casks are deprecated or disabled.',
+      generatedAt: '2026-02-26T00:00:00.000Z'
+    });
+
+    expect(parsed.command).toBe('brew doctor');
+    expect(parsed.counts.warning).toBe(1);
+    expect(parsed.findings[0]?.severity).toBe('warning');
+  });
+
+  it('rejects malformed doctor findings', () => {
+    const parsed = brewDoctorFindingSchema.safeParse({
+      id: '',
+      severity: 'warning',
+      title: '',
+      details: ['line'],
+      suggestedFix: null
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
   it('parses structured job progress payloads', () => {
     const parsed = brewJobProgressEventSchema.parse({
       jobId: 'job-1',
@@ -265,6 +309,22 @@ describe('window chrome contracts', () => {
     });
 
     expect(cleanup.success).toBe(true);
+  });
+
+  it('accepts doctor job actions', () => {
+    const doctor = brewJobProgressEventSchema.safeParse({
+      jobId: 'job-10',
+      action: 'doctor',
+      command: 'brew doctor',
+      stage: 'running',
+      stream: 'system',
+      message: 'Running brew doctor diagnostics',
+      packageName: null,
+      kind: 'system',
+      timestamp: '2026-02-26T00:00:00.000Z'
+    });
+
+    expect(doctor.success).toBe(true);
   });
 
   it('accepts service job actions', () => {
