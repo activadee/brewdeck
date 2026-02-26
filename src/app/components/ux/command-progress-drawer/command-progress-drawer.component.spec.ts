@@ -42,6 +42,7 @@ describe('CommandProgressDrawerComponent', () => {
         | 'reinstall'
         | 'upgradeOne'
         | 'upgradeAll'
+        | 'cleanup'
         | 'pin'
         | 'unpin'
         | 'tapAdd'
@@ -88,11 +89,11 @@ describe('CommandProgressDrawerComponent', () => {
     const component = fixture.componentInstance as any;
 
     component.onStatusFilterChange('failed');
-    component.onActionFilterChange('upgradeAll');
+    component.onActionFilterChange('cleanup');
     component.onKindFilterChange('system');
 
     expect(store.setStatusFilter).toHaveBeenCalledWith('failed');
-    expect(store.setActionFilter).toHaveBeenCalledWith('upgradeAll');
+    expect(store.setActionFilter).toHaveBeenCalledWith('cleanup');
     expect(store.setKindFilter).toHaveBeenCalledWith('system');
   });
 

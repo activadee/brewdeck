@@ -65,6 +65,7 @@ describe('AppShellComponent titlebar', () => {
         | 'reinstall'
         | 'upgradeOne'
         | 'upgradeAll'
+        | 'cleanup'
         | 'pin'
         | 'unpin'
         | 'tapAdd'
@@ -122,6 +123,7 @@ describe('AppShellComponent titlebar', () => {
           { path: 'installed', component: DummyRouteComponent },
           { path: 'browse', component: DummyRouteComponent },
           { path: 'taps', component: DummyRouteComponent },
+          { path: 'cleanup', component: DummyRouteComponent },
           { path: 'settings', component: DummyRouteComponent },
           { path: '', pathMatch: 'full', redirectTo: 'updates' }
         ]),
@@ -189,6 +191,23 @@ describe('AppShellComponent titlebar', () => {
       option.textContent?.includes('Go to Taps')
     );
     expect(tapsAction).toBeTruthy();
+  });
+
+  it('includes cleanup navigation action in command palette', async () => {
+    const { fixture } = await render();
+    const html = fixture.nativeElement as HTMLElement;
+
+    const paletteButton = html.querySelector(
+      '[data-testid="titlebar-palette"]'
+    ) as HTMLButtonElement | null;
+
+    paletteButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    const cleanupAction = Array.from(html.querySelectorAll('[role="option"]')).find((option) =>
+      option.textContent?.includes('Go to Cleanup')
+    );
+    expect(cleanupAction).toBeTruthy();
   });
 
   it('suppresses global toast for sync metadata job failures', async () => {
