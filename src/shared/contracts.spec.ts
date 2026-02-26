@@ -4,9 +4,11 @@ import {
   brewJobCompleteEventSchema,
   brewJobFailedEventSchema,
   brewJobProgressEventSchema,
+  brewServiceSchema,
   cleanupPreviewResultSchema,
   packageDetailsRequestSchema,
   packageDetailsSchema,
+  serviceRequestSchema,
   tapAddRequestSchema,
   tapRemoveRequestSchema,
   brewTapSchema,
@@ -119,6 +121,22 @@ describe('window chrome contracts', () => {
     expect(addValid.success).toBe(true);
     expect(addInvalid.success).toBe(false);
     expect(removeValid.success).toBe(true);
+  });
+
+  it('parses services payloads and validates service requests', () => {
+    const service = brewServiceSchema.parse({
+      name: 'postgresql@16',
+      status: 'started',
+      user: 'a1b3826',
+      file: '/opt/homebrew/opt/postgresql@16/homebrew.mxcl.postgresql@16.plist',
+      exitCode: null
+    });
+    const requestValid = serviceRequestSchema.safeParse({ name: 'postgresql@16' });
+    const requestInvalid = serviceRequestSchema.safeParse({ name: '   ' });
+
+    expect(service.status).toBe('started');
+    expect(requestValid.success).toBe(true);
+    expect(requestInvalid.success).toBe(false);
   });
 
   it('parses cleanup preview payloads', () => {
@@ -247,5 +265,45 @@ describe('window chrome contracts', () => {
     });
 
     expect(cleanup.success).toBe(true);
+  });
+
+  it('accepts service job actions', () => {
+    const start = brewJobProgressEventSchema.safeParse({
+      jobId: 'job-4',
+      action: 'serviceStart',
+      command: 'brew services start postgresql@16',
+      stage: 'queued',
+      stream: 'system',
+      message: 'Queued start for service postgresql@16',
+      packageName: 'postgresql@16',
+      kind: 'system',
+      timestamp: '2026-02-25T00:00:00.000Z'
+    });
+    const stop = brewJobProgressEventSchema.safeParse({
+      jobId: 'job-5',
+      action: 'serviceStop',
+      command: 'brew services stop postgresql@16',
+      stage: 'running',
+      stream: 'system',
+      message: 'Stopping service postgresql@16',
+      packageName: 'postgresql@16',
+      kind: 'system',
+      timestamp: '2026-02-25T00:00:00.000Z'
+    });
+    const restart = brewJobProgressEventSchema.safeParse({
+      jobId: 'job-6',
+      action: 'serviceRestart',
+      command: 'brew services restart postgresql@16',
+      stage: 'queued',
+      stream: 'system',
+      message: 'Queued restart for service postgresql@16',
+      packageName: 'postgresql@16',
+      kind: 'system',
+      timestamp: '2026-02-25T00:00:00.000Z'
+    });
+
+    expect(start.success).toBe(true);
+    expect(stop.success).toBe(true);
+    expect(restart.success).toBe(true);
   });
 });

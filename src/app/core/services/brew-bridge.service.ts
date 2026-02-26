@@ -11,6 +11,7 @@ import {
   type BrewJobFailedEvent,
   type BrewJobKind,
   type BrewJobProgressEvent,
+  type BrewService,
   type BrewTap,
   type CleanupPreviewResult,
   type CheckNowResult,
@@ -19,6 +20,7 @@ import {
   type PackageDetailsRequest,
   type PinOneRequest,
   type ReinstallOneRequest,
+  type ServiceRequest,
   type SearchCatalogRequest,
   type SearchCatalogResponse,
   type TapAddRequest,
@@ -77,6 +79,9 @@ const createFallbackBridge = (): BrewGuiBridge => ({
     return [];
   },
   async getTaps(): Promise<BrewTap[]> {
+    return [];
+  },
+  async getServices(): Promise<BrewService[]> {
     return [];
   },
   async getCleanupPreview(): Promise<CleanupPreviewResult> {
@@ -181,6 +186,30 @@ const createFallbackBridge = (): BrewGuiBridge => ({
     return createFallbackJobCompleteEvent({
       action: 'tapRemove',
       command: `brew untap ${_request.name}`,
+      kind: 'system',
+      packageName: _request.name
+    });
+  },
+  async serviceStart(_request: ServiceRequest): Promise<BrewJobCompleteEvent> {
+    return createFallbackJobCompleteEvent({
+      action: 'serviceStart',
+      command: `brew services start ${_request.name}`,
+      kind: 'system',
+      packageName: _request.name
+    });
+  },
+  async serviceStop(_request: ServiceRequest): Promise<BrewJobCompleteEvent> {
+    return createFallbackJobCompleteEvent({
+      action: 'serviceStop',
+      command: `brew services stop ${_request.name}`,
+      kind: 'system',
+      packageName: _request.name
+    });
+  },
+  async serviceRestart(_request: ServiceRequest): Promise<BrewJobCompleteEvent> {
+    return createFallbackJobCompleteEvent({
+      action: 'serviceRestart',
+      command: `brew services restart ${_request.name}`,
       kind: 'system',
       packageName: _request.name
     });

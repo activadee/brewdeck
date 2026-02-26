@@ -40,6 +40,7 @@ const ROUTE_LABELS: Record<string, string> = {
   '/installed': 'Installed',
   '/browse': 'Browse',
   '/cleanup': 'Cleanup',
+  '/services': 'Services',
   '/taps': 'Taps',
   '/settings': 'Settings',
   '/tray': 'Tray'
@@ -97,6 +98,7 @@ export class AppShellComponent {
     { id: 'browse', label: 'Go to Browse', hint: '/browse' },
     { id: 'taps', label: 'Go to Taps', hint: '/taps' },
     { id: 'cleanup', label: 'Go to Cleanup', hint: '/cleanup' },
+    { id: 'services', label: 'Go to Services', hint: '/services' },
     { id: 'settings', label: 'Go to Settings', hint: '/settings' }
   ];
 
@@ -180,6 +182,9 @@ export class AppShellComponent {
         break;
       case 'cleanup':
         void this.router.navigate(['/cleanup']);
+        break;
+      case 'services':
+        void this.router.navigate(['/services']);
         break;
       case 'settings':
         void this.router.navigate(['/settings']);

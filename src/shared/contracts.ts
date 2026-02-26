@@ -86,6 +86,28 @@ export type BrewTap = z.infer<typeof brewTapSchema>;
 export const getTapsResponseSchema = z.array(brewTapSchema);
 export type GetTapsResponse = z.infer<typeof getTapsResponseSchema>;
 
+export const brewServiceStatusSchema = z.union([
+  z.literal('started'),
+  z.literal('stopped'),
+  z.literal('none'),
+  z.literal('scheduled'),
+  z.literal('error'),
+  z.literal('unknown')
+]);
+export type BrewServiceStatus = z.infer<typeof brewServiceStatusSchema>;
+
+export const brewServiceSchema = z.object({
+  name: z.string(),
+  status: brewServiceStatusSchema,
+  user: z.string().nullable(),
+  file: z.string().nullable(),
+  exitCode: z.number().int().nullable()
+});
+export type BrewService = z.infer<typeof brewServiceSchema>;
+
+export const getServicesResponseSchema = z.array(brewServiceSchema);
+export type GetServicesResponse = z.infer<typeof getServicesResponseSchema>;
+
 export const tapAddRequestSchema = z.object({
   name: tapNameSchema
 });
@@ -95,6 +117,11 @@ export const tapRemoveRequestSchema = z.object({
   name: tapNameSchema
 });
 export type TapRemoveRequest = z.infer<typeof tapRemoveRequestSchema>;
+
+export const serviceRequestSchema = z.object({
+  name: z.string().trim().min(1)
+});
+export type ServiceRequest = z.infer<typeof serviceRequestSchema>;
 
 export const appSettingsSchema = z.object({
   checkIntervalMinutes: z.union([z.literal(60), z.literal(360), z.literal(1440)]),
@@ -333,6 +360,9 @@ export const brewJobActionSchema = z.union([
   z.literal('unpin'),
   z.literal('tapAdd'),
   z.literal('tapRemove'),
+  z.literal('serviceStart'),
+  z.literal('serviceStop'),
+  z.literal('serviceRestart'),
   z.literal('syncMetadata')
 ]);
 export type BrewJobAction = z.infer<typeof brewJobActionSchema>;
@@ -408,6 +438,7 @@ export interface BrewGuiBridge {
   getInstalled(): Promise<InstalledPackage[]>;
   getOutdated(): Promise<OutdatedPackage[]>;
   getTaps(): Promise<GetTapsResponse>;
+  getServices(): Promise<GetServicesResponse>;
   getCleanupPreview(): Promise<CleanupPreviewResult>;
   getPackageDetails(request: PackageDetailsRequest): Promise<PackageDetails>;
   searchCatalog(request: SearchCatalogRequest): Promise<SearchCatalogResponse>;
@@ -418,6 +449,9 @@ export interface BrewGuiBridge {
   unpinOne(request: UnpinOneRequest): Promise<BrewJobCompleteEvent>;
   tapAdd(request: TapAddRequest): Promise<BrewJobCompleteEvent>;
   tapRemove(request: TapRemoveRequest): Promise<BrewJobCompleteEvent>;
+  serviceStart(request: ServiceRequest): Promise<BrewJobCompleteEvent>;
+  serviceStop(request: ServiceRequest): Promise<BrewJobCompleteEvent>;
+  serviceRestart(request: ServiceRequest): Promise<BrewJobCompleteEvent>;
   upgradeOne(request: UpgradeOneRequest): Promise<BrewJobCompleteEvent>;
   upgradeAll(): Promise<BrewJobCompleteEvent>;
   runCleanup(): Promise<BrewJobCompleteEvent>;

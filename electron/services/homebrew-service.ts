@@ -10,11 +10,14 @@ import type {
   BrewJobKind,
   BrewJobProgressEvent,
   BrewJobStream,
+  BrewService,
+  BrewServiceStatus,
   BrewTap,
   CatalogPackage,
   CleanupPreviewItem,
   CleanupPreviewResult,
   CheckNowResult,
+  GetServicesResponse,
   InstallOneRequest,
   InstalledPackage,
   OutdatedPackage,
@@ -28,6 +31,7 @@ import type {
   SyncMetadataResult,
   TapAddRequest,
   TapRemoveRequest,
+  ServiceRequest,
   UnpinOneRequest,
   UninstallOneRequest,
   UpgradeOneRequest
@@ -50,6 +54,7 @@ const DETAILS_TTL_MS = 10 * 60 * 1000;
 const TAP_READ_TIMEOUT_MS = 30_000;
 const CLEANUP_PREVIEW_TIMEOUT_MS = 10 * 60 * 1000;
 const CLEANUP_RUN_TIMEOUT_MS = 30 * 60 * 1000;
+const SERVICES_MUTATION_TIMEOUT_MS = 5 * 60 * 1000;
 const PROTECTED_TAP_NAMES = new Set(['homebrew/core', 'homebrew/cask']);
 const PROTECTED_TAP_ALIASES = new Map<string, string>([
   ['homebrew/homebrew-core', 'homebrew/core'],
@@ -160,6 +165,18 @@ export function buildTapRemoveCommand(request: TapRemoveRequest): string[] {
   return ['untap', request.name];
 }
 
+export function buildServiceStartCommand(request: ServiceRequest): string[] {
+  return ['services', 'start', request.name];
+}
+
+export function buildServiceStopCommand(request: ServiceRequest): string[] {
+  return ['services', 'stop', request.name];
+}
+
+export function buildServiceRestartCommand(request: ServiceRequest): string[] {
+  return ['services', 'restart', request.name];
+}
+
 export class HomebrewService {
   private readonly runner = new BrewRunner();
   private readonly mutationQueue = new CommandQueue();
@@ -238,6 +255,21 @@ export class HomebrewService {
     );
 
     return items.sort(compareBrewTaps);
+  }
+
+  async getServices(): Promise<GetServicesResponse> {
+    const raw = await this.runner.runJson<unknown>(['services', 'list', '--json'], {
+      timeoutMs: TAP_READ_TIMEOUT_MS
+    });
+
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+
+    return raw
+      .map((entry) => parseBrewServiceEntry(entry))
+      .filter((service): service is BrewService => service !== null)
+      .sort((left, right) => left.name.localeCompare(right.name));
   }
 
   async getCleanupPreview(): Promise<CleanupPreviewResult> {
@@ -559,6 +591,51 @@ export class HomebrewService {
     } finally {
       this.invalidateAllDetailsCache();
     }
+  }
+
+  async serviceStart(request: ServiceRequest, sink: JobEventSink): Promise<BrewJobCompleteEvent> {
+    return this.runQueuedTrackedJob({
+      action: 'serviceStart',
+      command: buildServiceStartCommand(request),
+      target: {
+        packageName: request.name,
+        kind: 'system'
+      },
+      timeoutMs: SERVICES_MUTATION_TIMEOUT_MS,
+      queuedMessage: `Queued start for service ${request.name}`,
+      runningMessage: `Starting service ${request.name}`,
+      sink
+    });
+  }
+
+  async serviceStop(request: ServiceRequest, sink: JobEventSink): Promise<BrewJobCompleteEvent> {
+    return this.runQueuedTrackedJob({
+      action: 'serviceStop',
+      command: buildServiceStopCommand(request),
+      target: {
+        packageName: request.name,
+        kind: 'system'
+      },
+      timeoutMs: SERVICES_MUTATION_TIMEOUT_MS,
+      queuedMessage: `Queued stop for service ${request.name}`,
+      runningMessage: `Stopping service ${request.name}`,
+      sink
+    });
+  }
+
+  async serviceRestart(request: ServiceRequest, sink: JobEventSink): Promise<BrewJobCompleteEvent> {
+    return this.runQueuedTrackedJob({
+      action: 'serviceRestart',
+      command: buildServiceRestartCommand(request),
+      target: {
+        packageName: request.name,
+        kind: 'system'
+      },
+      timeoutMs: SERVICES_MUTATION_TIMEOUT_MS,
+      queuedMessage: `Queued restart for service ${request.name}`,
+      runningMessage: `Restarting service ${request.name}`,
+      sink
+    });
   }
 
   async runCleanup(sink: JobEventSink): Promise<BrewJobCompleteEvent> {
@@ -1872,4 +1949,62 @@ function readString(value: unknown): string | null {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function parseBrewServiceEntry(value: unknown): BrewService | null {
+  if (!isObject(value)) {
+    return null;
+  }
+
+  const name = readString(value['name']);
+  if (!name) {
+    return null;
+  }
+
+  return {
+    name,
+    status: normalizeServiceStatus(readString(value['status'])),
+    user: readString(value['user']),
+    file: readString(value['file']),
+    exitCode: readInteger(value['exit_code'])
+  };
+}
+
+function normalizeServiceStatus(value: string | null): BrewServiceStatus {
+  if (!value) {
+    return 'unknown';
+  }
+
+  const normalized = value.toLocaleLowerCase();
+  switch (normalized) {
+    case 'started':
+    case 'stopped':
+    case 'none':
+    case 'scheduled':
+      return normalized;
+    case 'error':
+      return 'error';
+    default:
+      return normalized.includes('error') ? 'error' : 'unknown';
+  }
+}
+
+function readInteger(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isInteger(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const parsed = Number.parseInt(trimmed, 10);
+    if (Number.isInteger(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
 }

@@ -9,12 +9,14 @@ import {
   brewJobProgressEventSchema,
   checkNowResultSchema,
   cleanupPreviewResultSchema,
+  getServicesResponseSchema,
   installOneRequestSchema,
   getTapsResponseSchema,
   packageDetailsRequestSchema,
   packageDetailsSchema,
   pinOneRequestSchema,
   reinstallOneRequestSchema,
+  serviceRequestSchema,
   tapAddRequestSchema,
   tapRemoveRequestSchema,
   unpinOneRequestSchema,
@@ -66,6 +68,11 @@ const api: BrewGuiBridge = {
   async getTaps() {
     const payload = await ipcRenderer.invoke(IPC_CHANNELS.GET_TAPS);
     return getTapsResponseSchema.parse(payload);
+  },
+
+  async getServices() {
+    const payload = await ipcRenderer.invoke(IPC_CHANNELS.GET_SERVICES);
+    return getServicesResponseSchema.parse(payload);
   },
 
   async getCleanupPreview() {
@@ -124,6 +131,24 @@ const api: BrewGuiBridge = {
   async tapRemove(request) {
     const parsedRequest = tapRemoveRequestSchema.parse(request);
     const payload = await ipcRenderer.invoke(IPC_CHANNELS.TAP_REMOVE, parsedRequest);
+    return brewJobCompleteEventSchema.parse(payload);
+  },
+
+  async serviceStart(request) {
+    const parsedRequest = serviceRequestSchema.parse(request);
+    const payload = await ipcRenderer.invoke(IPC_CHANNELS.SERVICE_START, parsedRequest);
+    return brewJobCompleteEventSchema.parse(payload);
+  },
+
+  async serviceStop(request) {
+    const parsedRequest = serviceRequestSchema.parse(request);
+    const payload = await ipcRenderer.invoke(IPC_CHANNELS.SERVICE_STOP, parsedRequest);
+    return brewJobCompleteEventSchema.parse(payload);
+  },
+
+  async serviceRestart(request) {
+    const parsedRequest = serviceRequestSchema.parse(request);
+    const payload = await ipcRenderer.invoke(IPC_CHANNELS.SERVICE_RESTART, parsedRequest);
     return brewJobCompleteEventSchema.parse(payload);
   },
 

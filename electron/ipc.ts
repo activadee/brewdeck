@@ -5,6 +5,7 @@ import {
   packageDetailsRequestSchema,
   pinOneRequestSchema,
   reinstallOneRequestSchema,
+  serviceRequestSchema,
   tapAddRequestSchema,
   tapRemoveRequestSchema,
   unpinOneRequestSchema,
@@ -79,6 +80,7 @@ export function registerIpcHandlers(options: RegisterIpcOptions): void {
   ipcMain.handle(IPC_CHANNELS.GET_INSTALLED, async () => homebrew.getInstalled());
   ipcMain.handle(IPC_CHANNELS.GET_OUTDATED, async () => homebrew.getOutdated());
   ipcMain.handle(IPC_CHANNELS.GET_TAPS, async () => homebrew.getTaps());
+  ipcMain.handle(IPC_CHANNELS.GET_SERVICES, async () => homebrew.getServices());
   ipcMain.handle(IPC_CHANNELS.CLEANUP_PREVIEW, async () =>
     cleanupPreviewResultSchema.parse(await homebrew.getCleanupPreview())
   );
@@ -156,6 +158,36 @@ export function registerIpcHandlers(options: RegisterIpcOptions): void {
     const parsed = tapRemoveRequestSchema.parse(payload);
 
     return homebrew.tapRemove(parsed, {
+      onProgress: emitJobProgress,
+      onComplete: emitJobComplete,
+      onFailed: emitJobFailed
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SERVICE_START, async (_event, payload) => {
+    const parsed = serviceRequestSchema.parse(payload);
+
+    return homebrew.serviceStart(parsed, {
+      onProgress: emitJobProgress,
+      onComplete: emitJobComplete,
+      onFailed: emitJobFailed
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SERVICE_STOP, async (_event, payload) => {
+    const parsed = serviceRequestSchema.parse(payload);
+
+    return homebrew.serviceStop(parsed, {
+      onProgress: emitJobProgress,
+      onComplete: emitJobComplete,
+      onFailed: emitJobFailed
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SERVICE_RESTART, async (_event, payload) => {
+    const parsed = serviceRequestSchema.parse(payload);
+
+    return homebrew.serviceRestart(parsed, {
       onProgress: emitJobProgress,
       onComplete: emitJobComplete,
       onFailed: emitJobFailed

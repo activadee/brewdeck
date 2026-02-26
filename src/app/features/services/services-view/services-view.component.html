@@ -1,0 +1,74 @@
+<section class="ui-shell-enter space-y-2">
+  <header class="flex flex-wrap items-center justify-between gap-2">
+    <div>
+      <h2 class="text-lg font-semibold">Services Management</h2>
+      <p class="mt-1 text-xs text-muted-foreground">
+        Inspect Homebrew service status and run
+        <span class="mono">brew services start/stop/restart</span>
+        directly.
+      </p>
+    </div>
+
+    <div class="flex gap-1.5">
+      <button type="button" z-button zType="outline" zSize="sm" (click)="servicesStore.refresh()" [zDisabled]="busy()">
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <app-package-search-input
+    [value]="servicesStore.query()"
+    placeholder="Search services, users, and plist files"
+    (valueChange)="servicesStore.setQuery($event)"
+  />
+
+  <app-package-filter-chips
+    [selected]="servicesStore.statusFilter()"
+    [options]="statusFilterOptions()"
+    (selectedChange)="onStatusFilterChange($event)"
+  />
+
+  @if (servicesStore.loading()) {
+    <app-loading-state label="Loading Homebrew services…" />
+  } @else if (servicesStore.error() && servicesStore.totalCount() === 0) {
+    <app-empty-state label="Services listing failed" [description]="servicesStore.error() ?? ''" />
+  } @else if (servicesStore.filteredItems().length === 0) {
+    <app-empty-state label="No service results" description="No services match the current query and filters." />
+  } @else {
+    <div class="stagger-list space-y-1.5">
+      @for (service of servicesStore.filteredItems(); track service.name) {
+        <z-card class="fade-up border-border/70 bg-card/95 shadow-sm">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 space-y-1.5">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <h3 class="text-sm font-semibold">{{ service.name }}</h3>
+                <z-badge [zType]="statusBadgeType(service.status)" zShape="pill" class="mono text-[10px] uppercase">
+                  {{ service.status }}
+                </z-badge>
+              </div>
+
+              <p class="mono text-[11px] text-muted-foreground">user {{ service.user ?? 'n/a' }}</p>
+              <p class="mono text-[11px] text-muted-foreground break-all">file {{ service.file ?? 'unavailable' }}</p>
+              <p class="mono text-[11px] text-muted-foreground">exit {{ service.exitCode ?? 'n/a' }}</p>
+            </div>
+
+            <app-package-row-overflow-menu
+              [actions]="overflowActionsFor(service)"
+              ariaLabel="Service actions"
+              (selected)="onOverflowAction(service, $event)"
+            />
+          </div>
+        </z-card>
+      }
+    </div>
+  }
+
+  @if (servicesStore.error() && servicesStore.totalCount() > 0) {
+    <p class="text-sm text-destructive">{{ servicesStore.error() }}</p>
+  }
+
+  <footer class="mono text-[10px] text-muted-foreground">
+    total {{ servicesStore.totalCount() }} • running {{ servicesStore.runningCount() }} • errors {{ servicesStore.errorCount() }}
+    • unknown {{ servicesStore.unknownCount() }}
+  </footer>
+</section>

@@ -47,6 +47,9 @@ describe('CommandProgressDrawerComponent', () => {
         | 'unpin'
         | 'tapAdd'
         | 'tapRemove'
+        | 'serviceStart'
+        | 'serviceStop'
+        | 'serviceRestart'
         | 'syncMetadata'
       >('all'),
       kindFilter: signal<'all' | 'formula' | 'cask' | 'system'>('all'),
@@ -89,11 +92,11 @@ describe('CommandProgressDrawerComponent', () => {
     const component = fixture.componentInstance as any;
 
     component.onStatusFilterChange('failed');
-    component.onActionFilterChange('cleanup');
+    component.onActionFilterChange('serviceRestart');
     component.onKindFilterChange('system');
 
     expect(store.setStatusFilter).toHaveBeenCalledWith('failed');
-    expect(store.setActionFilter).toHaveBeenCalledWith('cleanup');
+    expect(store.setActionFilter).toHaveBeenCalledWith('serviceRestart');
     expect(store.setKindFilter).toHaveBeenCalledWith('system');
   });
 

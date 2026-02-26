@@ -7,6 +7,7 @@ import type {
   BrewJobCompleteEvent,
   BrewJobFailedEvent,
   BrewJobProgressEvent,
+  BrewService,
   BrewTap,
   CleanupPreviewResult,
   CheckNowResult,
@@ -17,6 +18,7 @@ import type {
   PackageDetailsRequest,
   PinOneRequest,
   ReinstallOneRequest,
+  ServiceRequest,
   SearchCatalogRequest,
   SearchCatalogResponse,
   SyncMetadataResult,
@@ -66,6 +68,10 @@ export class BrewFacadeService {
     return this.bridge.api.getTaps();
   }
 
+  getServices(): Promise<BrewService[]> {
+    return this.bridge.api.getServices();
+  }
+
   getCleanupPreview(): Promise<CleanupPreviewResult> {
     return this.bridge.api.getCleanupPreview();
   }
@@ -104,6 +110,18 @@ export class BrewFacadeService {
 
   tapRemove(request: TapRemoveRequest): Promise<BrewJobCompleteEvent> {
     return this.bridge.api.tapRemove(request);
+  }
+
+  serviceStart(request: ServiceRequest): Promise<BrewJobCompleteEvent> {
+    return this.bridge.api.serviceStart(request);
+  }
+
+  serviceStop(request: ServiceRequest): Promise<BrewJobCompleteEvent> {
+    return this.bridge.api.serviceStop(request);
+  }
+
+  serviceRestart(request: ServiceRequest): Promise<BrewJobCompleteEvent> {
+    return this.bridge.api.serviceRestart(request);
   }
 
   runCleanup(): Promise<BrewJobCompleteEvent> {

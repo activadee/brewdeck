@@ -16,6 +16,7 @@ import {
   packageDetailsRequestSchema,
   pinOneRequestSchema,
   reinstallOneRequestSchema,
+  serviceRequestSchema,
   tapAddRequestSchema,
   tapRemoveRequestSchema,
   unpinOneRequestSchema,
@@ -26,6 +27,9 @@ import {
   buildInstallCommand,
   buildPinCommand,
   buildReinstallCommand,
+  buildServiceRestartCommand,
+  buildServiceStartCommand,
+  buildServiceStopCommand,
   buildTapAddCommand,
   buildTapRemoveCommand,
   buildUninstallCommand,
@@ -145,6 +149,20 @@ describe('buildTapRemoveCommand', () => {
   });
 });
 
+describe('service command builders', () => {
+  it('builds service start command', () => {
+    expect(buildServiceStartCommand({ name: 'unbound' })).toEqual(['services', 'start', 'unbound']);
+  });
+
+  it('builds service stop command', () => {
+    expect(buildServiceStopCommand({ name: 'unbound' })).toEqual(['services', 'stop', 'unbound']);
+  });
+
+  it('builds service restart command', () => {
+    expect(buildServiceRestartCommand({ name: 'unbound' })).toEqual(['services', 'restart', 'unbound']);
+  });
+});
+
 describe('uninstallOneRequestSchema', () => {
   it('rejects zap for formula uninstall requests', () => {
     const parsed = uninstallOneRequestSchema.safeParse({
@@ -207,6 +225,13 @@ describe('tap request schemas', () => {
     expect(tapAddRequestSchema.safeParse({ name: 'sst/tap' }).success).toBe(true);
     expect(tapRemoveRequestSchema.safeParse({ name: 'steipete/tap' }).success).toBe(true);
     expect(tapAddRequestSchema.safeParse({ name: 'not-a-tap' }).success).toBe(false);
+  });
+});
+
+describe('serviceRequestSchema', () => {
+  it('accepts service names and rejects empty values', () => {
+    expect(serviceRequestSchema.safeParse({ name: 'unbound' }).success).toBe(true);
+    expect(serviceRequestSchema.safeParse({ name: '   ' }).success).toBe(false);
   });
 });
 
@@ -502,6 +527,47 @@ describe('HomebrewService.getTaps', () => {
       rmSync(sandbox, { recursive: true, force: true });
     }
   }, 20_000);
+});
+
+describe('HomebrewService.getServices', () => {
+  it('parses and sorts service rows while normalizing unknown statuses', async () => {
+    const service = new HomebrewService() as any;
+    const runJson = vi.fn(async () => [
+      {
+        name: 'zebra-service',
+        status: 'started',
+        user: 'a1b3826',
+        file: '/opt/homebrew/opt/zebra/homebrew.mxcl.zebra-service.plist',
+        exit_code: null
+      },
+      {
+        name: 'alpha-service',
+        status: 'strange-status',
+        user: null,
+        file: '',
+        exit_code: '8'
+      },
+      {
+        name: '',
+        status: 'none',
+        user: null,
+        file: null,
+        exit_code: null
+      }
+    ]);
+
+    service.runner = { runJson };
+
+    const services = await service.getServices();
+
+    expect(runJson).toHaveBeenCalledWith(['services', 'list', '--json'], expect.any(Object));
+    expect(services).toHaveLength(2);
+    expect(services[0]?.name).toBe('alpha-service');
+    expect(services[0]?.status).toBe('unknown');
+    expect(services[0]?.exitCode).toBe(8);
+    expect(services[1]?.name).toBe('zebra-service');
+    expect(services[1]?.status).toBe('started');
+  });
 });
 
 describe('HomebrewService.installOne', () => {
@@ -975,6 +1041,105 @@ describe('HomebrewService.runCleanup', () => {
       action: 'cleanup',
       kind: 'system',
       command: 'brew cleanup',
+      exitCode: 1
+    });
+  });
+});
+
+describe('HomebrewService service actions', () => {
+  it('enqueues service-start jobs with service timeout and action metadata', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => ({ stdout: 'started', stderr: '', exitCode: 0 }));
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+    const onProgress = vi.fn();
+    const onComplete = vi.fn();
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    const result = await service.serviceStart(
+      { name: 'unbound' },
+      {
+        onProgress,
+        onComplete,
+        onFailed: () => undefined
+      }
+    );
+
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(enqueue.mock.calls[0]?.[1]).toBe(5 * 60 * 1000);
+    expect(onProgress.mock.calls[0]?.[0].action).toBe('serviceStart');
+    expect(result.action).toBe('serviceStart');
+    expect(result.kind).toBe('system');
+    expect(result.packageName).toBe('unbound');
+    expect(result.command).toBe('brew services start unbound');
+  });
+
+  it('enqueues service-stop jobs with service timeout and action metadata', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => ({ stdout: 'stopped', stderr: '', exitCode: 0 }));
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+    const onProgress = vi.fn();
+    const onComplete = vi.fn();
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    const result = await service.serviceStop(
+      { name: 'unbound' },
+      {
+        onProgress,
+        onComplete,
+        onFailed: () => undefined
+      }
+    );
+
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(enqueue.mock.calls[0]?.[1]).toBe(5 * 60 * 1000);
+    expect(onProgress.mock.calls[0]?.[0].action).toBe('serviceStop');
+    expect(result.action).toBe('serviceStop');
+    expect(result.command).toBe('brew services stop unbound');
+  });
+
+  it('emits structured failed events when service restart fails', async () => {
+    const service = new HomebrewService() as any;
+    const runText = vi.fn(async () => {
+      throw new BrewCommandError('brew services restart failed', {
+        command: ['services', 'restart', 'unbound'],
+        exitCode: 1,
+        stdout: '',
+        stderr: 'Error: failed to restart'
+      });
+    });
+    const enqueue = vi.fn(async (task: (signal: AbortSignal) => Promise<unknown>) =>
+      task(new AbortController().signal)
+    );
+    const onFailed = vi.fn();
+
+    service.runner = { runText };
+    service.mutationQueue = { enqueue };
+
+    await expect(
+      service.serviceRestart(
+        { name: 'unbound' },
+        {
+          onProgress: () => undefined,
+          onComplete: () => undefined,
+          onFailed
+        }
+      )
+    ).rejects.toThrow();
+
+    expect(onFailed).toHaveBeenCalledTimes(1);
+    expect(onFailed.mock.calls[0]?.[0]).toMatchObject({
+      action: 'serviceRestart',
+      kind: 'system',
+      packageName: 'unbound',
+      command: 'brew services restart unbound',
       exitCode: 1
     });
   });

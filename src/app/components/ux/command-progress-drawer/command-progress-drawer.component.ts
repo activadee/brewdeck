@@ -44,6 +44,9 @@ export class CommandProgressDrawerComponent {
     { value: 'unpin', label: 'Unpin' },
     { value: 'tapAdd', label: 'Tap add' },
     { value: 'tapRemove', label: 'Tap remove' },
+    { value: 'serviceStart', label: 'Service start' },
+    { value: 'serviceStop', label: 'Service stop' },
+    { value: 'serviceRestart', label: 'Service restart' },
     { value: 'syncMetadata', label: 'Sync metadata' }
   ];
 
@@ -88,6 +91,12 @@ export class CommandProgressDrawerComponent {
         return 'Add tap';
       case 'tapRemove':
         return 'Remove tap';
+      case 'serviceStart':
+        return 'Start service';
+      case 'serviceStop':
+        return 'Stop service';
+      case 'serviceRestart':
+        return 'Restart service';
       case 'syncMetadata':
         return 'Sync metadata';
       default:

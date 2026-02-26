@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 import { BrowseCatalogViewComponent } from './features/browse/browse-catalog-view/browse-catalog-view.component';
 import { InstalledPackagesViewComponent } from './features/installed/installed-packages-view/installed-packages-view.component';
 import { SettingsViewComponent } from './features/settings/settings-view/settings-view.component';
+import { ServicesViewComponent } from './features/services/services-view/services-view.component';
 import { TapsViewComponent } from './features/taps/taps-view/taps-view.component';
 import { TrayPopoverComponent } from './features/tray/tray-popover/tray-popover.component';
 import { UpdatesViewComponent } from './features/updates/updates-view/updates-view.component';
@@ -23,6 +24,7 @@ export const routes: Routes = [
       { path: 'browse', component: BrowseCatalogViewComponent },
       { path: 'taps', component: TapsViewComponent },
       { path: 'cleanup', component: CleanupViewComponent },
+      { path: 'services', component: ServicesViewComponent },
       { path: 'settings', component: SettingsViewComponent },
       { path: '', pathMatch: 'full', redirectTo: 'updates' }
     ]
