@@ -73,18 +73,69 @@
 
           <z-divider zSpacing="sm" />
 
-          <div class="space-y-2">
+          <div class="space-y-3">
             <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-medium">Action templates</p>
-              <button type="button" z-button zType="outline" zSize="sm" (click)="saveTemplate()">Add preset</button>
+              <button type="button" z-button zType="outline" zSize="sm" (click)="startNewTemplate()">New template</button>
             </div>
+
             <ul class="space-y-1 text-sm">
               @for (template of templatesStore.templates(); track template.id) {
-                <li class="rounded border border-border/60 px-2 py-1">{{ template.name }} ({{ template.steps.length }} steps)</li>
+                <li class="flex items-center justify-between gap-2 rounded border border-border/60 px-2 py-1">
+                  <span>{{ template.name }} ({{ template.steps.length }} steps)</span>
+                  <span class="flex gap-1">
+                    <button type="button" z-button zType="ghost" zSize="sm" (click)="editTemplate(template.id)">Edit</button>
+                    <button type="button" z-button zType="ghost" zSize="sm" (click)="deleteTemplate(template.id)">Delete</button>
+                  </span>
+                </li>
               } @empty {
                 <li class="text-muted-foreground">No templates yet.</li>
               }
             </ul>
+
+            <div class="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+              <label class="block space-y-1 text-sm">
+                <span class="text-muted-foreground">Template name</span>
+                <input z-input type="text" [value]="templateName()" (input)="templateName.set($any($event.target).value)" />
+              </label>
+
+              <div class="space-y-1">
+                @for (step of templateSteps(); track $index) {
+                  <div class="flex flex-wrap items-center gap-1">
+                    <select
+                      class="rounded-md border border-border bg-background px-2 py-1 text-sm"
+                      [value]="step.action"
+                      (change)="updateStepAction($index, $any($event.target).value)"
+                    >
+                      @for (option of stepOptions; track option) {
+                        <option [value]="option">{{ option }}</option>
+                      }
+                    </select>
+                    <button type="button" z-button zType="ghost" zSize="sm" [zDisabled]="$index === 0" (click)="moveStep($index, -1)">↑</button>
+                    <button
+                      type="button"
+                      z-button
+                      zType="ghost"
+                      zSize="sm"
+                      [zDisabled]="$index === templateSteps().length - 1"
+                      (click)="moveStep($index, 1)"
+                    >
+                      ↓
+                    </button>
+                    <button type="button" z-button zType="ghost" zSize="sm" (click)="removeStep($index)">Remove</button>
+                  </div>
+                }
+              </div>
+
+              <div class="flex gap-2">
+                <button type="button" z-button zType="outline" zSize="sm" (click)="addStep()">Add step</button>
+                <button type="button" z-button zSize="sm" (click)="saveTemplateDraft()">Save template</button>
+              </div>
+
+              @if (templateError()) {
+                <p class="text-xs text-destructive">{{ templateError() }}</p>
+              }
+            </div>
           </div>
 
           <z-divider zSpacing="sm" />
