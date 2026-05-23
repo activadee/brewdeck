@@ -3,8 +3,9 @@ import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { CatalogPackage } from '../../../../shared/contracts';
-import { BrewFacadeService } from '../../../core/services/brew-facade.service';
-import { ToastService } from '../../../core/services/toast.service';
+import { PackageActionsService } from '../../../core/services/package-actions.service';
+import { SettingsStore } from '../../../core/stores/settings.store';
+import { TemplatesStore } from '../../../core/stores/templates.store';
 import { CatalogStore } from '../../../core/stores/catalog.store';
 import { InstalledStore } from '../../../core/stores/installed.store';
 import { PackageDetailsStore } from '../../../core/stores/package-details.store';
@@ -57,8 +58,13 @@ describe('BrowseCatalogViewComponent', () => {
     const installedStore = createInstalledStore(installedIds);
     const updatesStore = { refresh: vi.fn(async () => undefined) };
     const packageDetailsStore = { openFor: vi.fn(async () => undefined) };
-    const facade = { installOne: vi.fn(async () => undefined) };
-    const toast = { push: vi.fn() };
+    const packageActions = {
+      installOne: vi.fn(async () => true),
+      runTemplate: vi.fn(async () => true),
+      showAdvancedInstallOptions: () => false
+    };
+    const settingsStore = { settings: () => ({ showAdvancedInstallOptions: false }) };
+    const templatesStore = { templates: signal([]), load: vi.fn(async () => undefined) };
 
     await TestBed.configureTestingModule({
       imports: [BrowseCatalogViewComponent],
@@ -67,8 +73,9 @@ describe('BrowseCatalogViewComponent', () => {
         { provide: InstalledStore, useValue: installedStore },
         { provide: UpdatesStore, useValue: updatesStore },
         { provide: PackageDetailsStore, useValue: packageDetailsStore },
-        { provide: BrewFacadeService, useValue: facade },
-        { provide: ToastService, useValue: toast }
+        { provide: PackageActionsService, useValue: packageActions },
+        { provide: SettingsStore, useValue: settingsStore },
+        { provide: TemplatesStore, useValue: templatesStore }
       ]
     }).compileComponents();
 
@@ -77,7 +84,7 @@ describe('BrowseCatalogViewComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    return { fixture, facade, catalogStore, installedStore, updatesStore, packageDetailsStore, toast };
+    return { fixture, packageActions, catalogStore, installedStore, updatesStore, packageDetailsStore };
   }
 
   it('shows install action for installable packages', async () => {
@@ -110,7 +117,7 @@ describe('BrowseCatalogViewComponent', () => {
   });
 
   it('opens confirm dialog and invokes install flow', async () => {
-    const { fixture, facade, catalogStore, installedStore, updatesStore, toast } = await render([baseItem]);
+    const { fixture, packageActions, catalogStore, installedStore, updatesStore } = await render([baseItem]);
     const html = fixture.nativeElement as HTMLElement;
 
     findButtonByText(html, 'Install')?.click();
@@ -123,18 +130,20 @@ describe('BrowseCatalogViewComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(facade.installOne).toHaveBeenCalledWith({ kind: 'formula', name: 'ripgrep' });
+    expect(packageActions.installOne).toHaveBeenCalledWith({ kind: 'formula', name: 'ripgrep' });
     expect(installedStore.refresh).toHaveBeenCalled();
     expect(updatesStore.refresh).toHaveBeenCalled();
     expect(catalogStore.refresh).toHaveBeenCalled();
-    expect(toast.push).toHaveBeenCalledWith('Installed ripgrep.', 'success');
   });
 
   it('exposes view-details overflow action for browse rows', async () => {
     const { fixture } = await render([baseItem]);
     const component = fixture.componentInstance as any;
 
-    expect(component.overflowActionsFor(baseItem)).toEqual([{ id: 'view-details', label: 'View details' }]);
+    expect(component.overflowActionsFor(baseItem)).toEqual([
+      { id: 'view-details', label: 'View details' },
+      { id: 'run-template', label: 'Run template…', disabled: true }
+    ]);
   });
 
   it('opens details drawer from overflow action', async () => {

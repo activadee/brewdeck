@@ -38,7 +38,11 @@
       @if (catalogStore.loading()) {
         <app-loading-state label="Loading catalog…" />
       } @else if (catalogStore.error()) {
-        <app-empty-state label="Catalog unavailable" [description]="catalogStore.error() ?? ''" />
+        <app-diagnostic-panel
+          title="Catalog unavailable"
+          [message]="catalogStore.error() ?? ''"
+          [copyText]="catalogStore.error()"
+        />
       } @else if (catalogStore.items().length === 0) {
         <app-empty-state label="No catalog results" description="Try a broader query." />
       } @else {
@@ -90,9 +94,12 @@
       [title]="installDialogTitle()"
       [message]="installDialogMessage()"
       [commandPreview]="installCommandPreview()"
+      [showForceOption]="showForceInstallOption()"
+      [forceSelected]="forceSelected()"
       [confirmLabel]="'Install package'"
       [busy]="installBusy()"
       (cancel)="closeInstallDialog()"
       (confirm)="confirmInstall()"
+      (forceSelectedChange)="onForceSelectedChange($event)"
     />
   
