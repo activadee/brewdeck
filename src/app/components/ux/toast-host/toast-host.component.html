@@ -10,9 +10,22 @@
               <p class="text-sm">{{ toast.message }}</p>
             </div>
 
-            <button type="button" z-button zType="ghost" zSize="sm" class="shrink-0" (click)="toastService.dismiss(toast.id)">
-              Close
-            </button>
+            <div class="flex shrink-0 flex-col items-end gap-1">
+              @if (toast.action) {
+                <button
+                  type="button"
+                  z-button
+                  zType="outline"
+                  zSize="sm"
+                  (click)="toastService.runAction(toast.id)"
+                >
+                  {{ toast.action.label }}
+                </button>
+              }
+              <button type="button" z-button zType="ghost" zSize="sm" (click)="toastService.dismiss(toast.id)">
+                Close
+              </button>
+            </div>
           </div>
         </z-card>
       }
