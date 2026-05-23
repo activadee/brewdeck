@@ -64,7 +64,7 @@
 
     <app-command-palette
       [open]="paletteOpen()"
-      [actions]="paletteActions"
+      [actions]="paletteActions()"
       (selected)="runPaletteAction($event)"
       (closed)="paletteOpen.set(false)"
     />
