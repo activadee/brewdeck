@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_SETTINGS, type AppSettings, type AppSettingsUpdate } from '../../../../shared/contracts';
 import { SettingsStore } from '../../../core/stores/settings.store';
+import { TemplatesStore } from '../../../core/stores/templates.store';
 import { SettingsViewComponent } from './settings-view.component';
 
 describe('SettingsViewComponent', () => {
@@ -22,9 +23,18 @@ describe('SettingsViewComponent', () => {
       update
     };
 
+    const templatesStore = {
+      templates: signal([]),
+      load: vi.fn(async () => undefined),
+      save: vi.fn(async () => undefined)
+    };
+
     await TestBed.configureTestingModule({
       imports: [SettingsViewComponent],
-      providers: [{ provide: SettingsStore, useValue: settingsStore }]
+      providers: [
+        { provide: SettingsStore, useValue: settingsStore },
+        { provide: TemplatesStore, useValue: templatesStore }
+      ]
     }).compileComponents();
 
     const fixture = TestBed.createComponent(SettingsViewComponent);
@@ -57,7 +67,9 @@ describe('SettingsViewComponent', () => {
       quietHoursEnabled: true,
       quietHoursStart: '23:15',
       quietHoursEnd: '06:45',
-      defaultView: 'installed'
+      defaultView: 'installed',
+      showAdvancedInstallOptions: true,
+      telemetryEnabled: true
     });
 
     await component.save();
@@ -71,7 +83,9 @@ describe('SettingsViewComponent', () => {
       quietHoursEnabled: true,
       quietHoursStart: '23:15',
       quietHoursEnd: '06:45',
-      defaultView: 'installed'
+      defaultView: 'installed',
+      showAdvancedInstallOptions: true,
+      telemetryEnabled: true
     });
   });
 
@@ -105,7 +119,9 @@ describe('SettingsViewComponent', () => {
       quietHoursEnabled: true,
       quietHoursStart: '21:00',
       quietHoursEnd: '05:30',
-      defaultView: 'updates'
+      defaultView: 'updates',
+      showAdvancedInstallOptions: false,
+      telemetryEnabled: false
     });
   });
 });

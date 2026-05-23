@@ -8,6 +8,7 @@ import { ZardDividerComponent } from '@/shared/components/divider';
 import { ZardInputDirective } from '@/shared/components/input';
 import { ZardSegmentedComponent, type SegmentedOption } from '@/shared/components/segmented';
 import { ZardSwitchComponent } from '@/shared/components/switch';
+import { TemplatesStore } from '../../../core/stores/templates.store';
 import { SettingsStore } from '../../../core/stores/settings.store';
 
 @Component({
@@ -28,6 +29,7 @@ import { SettingsStore } from '../../../core/stores/settings.store';
 })
 export class SettingsViewComponent {
   protected readonly settingsStore = inject(SettingsStore);
+  protected readonly templatesStore = inject(TemplatesStore);
 
   private readonly fb = inject(FormBuilder).nonNullable;
 
@@ -52,10 +54,13 @@ export class SettingsViewComponent {
     quietHoursEnabled: false,
     quietHoursStart: '22:00',
     quietHoursEnd: '07:00',
-    defaultView: 'updates' as 'updates' | 'installed' | 'browse'
+    defaultView: 'updates' as 'updates' | 'installed' | 'browse',
+    showAdvancedInstallOptions: false,
+    telemetryEnabled: false
   });
 
   constructor() {
+    void this.templatesStore.load();
     effect(() => {
       const settings = this.settingsStore.settings();
       this.form.patchValue(
@@ -68,10 +73,19 @@ export class SettingsViewComponent {
           quietHoursEnabled: settings.quietHoursEnabled,
           quietHoursStart: settings.quietHoursStart,
           quietHoursEnd: settings.quietHoursEnd,
-          defaultView: settings.defaultView
+          defaultView: settings.defaultView,
+          showAdvancedInstallOptions: settings.showAdvancedInstallOptions,
+          telemetryEnabled: settings.telemetryEnabled
         },
         { emitEvent: false }
       );
+    });
+  }
+
+  protected async saveTemplate(): Promise<void> {
+    await this.templatesStore.save({
+      name: 'Install + pin',
+      steps: [{ action: 'install' }, { action: 'pin' }]
     });
   }
 
@@ -86,7 +100,9 @@ export class SettingsViewComponent {
       quietHoursEnabled: value.quietHoursEnabled,
       quietHoursStart: value.quietHoursStart,
       quietHoursEnd: value.quietHoursEnd,
-      defaultView: value.defaultView
+      defaultView: value.defaultView,
+      showAdvancedInstallOptions: value.showAdvancedInstallOptions,
+      telemetryEnabled: value.telemetryEnabled
     });
   }
 
@@ -101,7 +117,9 @@ export class SettingsViewComponent {
       quietHoursEnabled: settings.quietHoursEnabled,
       quietHoursStart: settings.quietHoursStart,
       quietHoursEnd: settings.quietHoursEnd,
-      defaultView: settings.defaultView
+      defaultView: settings.defaultView,
+      showAdvancedInstallOptions: settings.showAdvancedInstallOptions,
+      telemetryEnabled: settings.telemetryEnabled
     });
   }
 }

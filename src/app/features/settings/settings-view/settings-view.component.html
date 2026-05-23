@@ -66,6 +66,29 @@
 
           <z-divider zSpacing="sm" />
 
+          <div class="space-y-2">
+            <z-switch formControlName="showAdvancedInstallOptions">Show advanced install options (--force)</z-switch>
+            <z-switch formControlName="telemetryEnabled">Opt-in anonymous telemetry (local aggregates only)</z-switch>
+          </div>
+
+          <z-divider zSpacing="sm" />
+
+          <div class="space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-sm font-medium">Action templates</p>
+              <button type="button" z-button zType="outline" zSize="sm" (click)="saveTemplate()">Add preset</button>
+            </div>
+            <ul class="space-y-1 text-sm">
+              @for (template of templatesStore.templates(); track template.id) {
+                <li class="rounded border border-border/60 px-2 py-1">{{ template.name }} ({{ template.steps.length }} steps)</li>
+              } @empty {
+                <li class="text-muted-foreground">No templates yet.</li>
+              }
+            </ul>
+          </div>
+
+          <z-divider zSpacing="sm" />
+
           <div class="space-y-1.5">
             <p class="text-sm font-medium">Default view</p>
             <z-segmented
