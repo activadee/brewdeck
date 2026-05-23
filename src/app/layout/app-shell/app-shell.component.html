@@ -43,6 +43,22 @@
             [brewVersion]="appStatusStore.availability()?.version ?? null"
           />
 
+          @if (showRecoveryBanner()) {
+            <div class="mx-3 mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+              <p class="font-medium">Recovered unfinished jobs from last session</p>
+              <ul class="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                @for (job of recoveredJobs(); track job.jobId) {
+                  <li class="mono">{{ job.command }} · {{ job.stage }}</li>
+                }
+              </ul>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <button type="button" z-button zSize="sm" (click)="openActivityDrawer()">Open activity</button>
+                <a z-button zType="outline" zSize="sm" routerLink="/history">View History</a>
+                <button type="button" z-button zType="ghost" zSize="sm" (click)="dismissRecoveryBanner()">Dismiss</button>
+              </div>
+            </div>
+          }
+
           <div class="brew-main-pane">
             @if (appStatusStore.availability() && !(appStatusStore.availability()?.available ?? false)) {
               <div class="h-full overflow-y-auto">
@@ -64,9 +80,14 @@
 
     <app-command-palette
       [open]="paletteOpen()"
+      [mode]="paletteMode()"
       [actions]="paletteActions()"
-      (selected)="runPaletteAction($event)"
-      (closed)="paletteOpen.set(false)"
+      [packageItems]="palettePackageItems()"
+      [templateItems]="paletteTemplateItems()"
+      [placeholder]="palettePlaceholder()"
+      (selected)="onPaletteSelected($event)"
+      (back)="onPaletteBack()"
+      (closed)="closePalette()"
     />
 
     <app-package-details-drawer />

@@ -5,7 +5,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { BrewJobFailedEvent, WindowChromeState } from '../../../shared/contracts';
 import { BrewFacadeService } from '../../core/services/brew-facade.service';
+import { PackageActionsService } from '../../core/services/package-actions.service';
 import { ToastService } from '../../core/services/toast.service';
+import { PackageSelectionStore } from '../../core/stores/package-selection.store';
+import { PackageDetailsStore } from '../../core/stores/package-details.store';
+import { TemplatesStore } from '../../core/stores/templates.store';
 import { AppStatusStore } from '../../core/stores/app-status.store';
 import { CatalogStore } from '../../core/stores/catalog.store';
 import { InstalledStore } from '../../core/stores/installed.store';
@@ -42,14 +46,15 @@ describe('AppShellComponent titlebar', () => {
       applyUpdatesChanged: vi.fn()
     };
 
-    const catalogStore = { refresh: vi.fn(async () => undefined) };
-    const installedStore = { refresh: vi.fn(async () => undefined) };
+    const catalogStore = { refresh: vi.fn(async () => undefined), items: signal([]) };
+    const installedStore = { refresh: vi.fn(async () => undefined), items: signal([]) };
     const updatesStore = {
       updateCount: signal(2),
       lastCheckedAt: signal<string | null>(new Date().toISOString()),
       refresh: vi.fn(async () => undefined),
       checkNow: vi.fn(async () => undefined),
-      setExternalUpdate: vi.fn()
+      setExternalUpdate: vi.fn(),
+      items: signal([])
     };
 
     const jobsStore = {
@@ -91,11 +96,31 @@ describe('AppShellComponent titlebar', () => {
       markFailed: vi.fn()
     };
 
-    const settingsStore = { load: vi.fn(async () => undefined) };
+    const settingsStore = { load: vi.fn(async () => undefined), settings: () => ({}) };
+    const templatesStore = { load: vi.fn(async () => undefined), templates: signal([]) };
+    const packageDetailsStore = {
+      open: signal(false),
+      loading: signal(false),
+      error: signal<string | null>(null),
+      details: signal(null),
+      openFor: vi.fn(async () => undefined),
+      close: vi.fn()
+    };
+    const packageActions = {
+      upgradeMany: vi.fn(async () => ({ succeeded: 0, failed: 0, results: [] })),
+      uninstallMany: vi.fn(async () => ({ succeeded: 0, failed: 0, results: [] })),
+      pinMany: vi.fn(async () => ({ succeeded: 0, failed: 0, results: [] })),
+      installOne: vi.fn(async () => true),
+      uninstallOne: vi.fn(async () => true),
+      runTemplate: vi.fn(async () => true),
+      notifyPinSuccess: vi.fn()
+    };
 
     const facade = {
       isElectron: true,
       getWindowChromeState: vi.fn(async () => chromeState),
+      recoverJobs: vi.fn(async () => []),
+      pinOne: vi.fn(async () => ({ success: true })),
       syncMetadata: vi.fn(async () => ({ success: true, output: '', syncedAt: new Date().toISOString() })),
       onUpdatesChanged: vi.fn(() => () => undefined),
       onWindowChromeChanged: vi.fn(() => () => undefined),
@@ -139,8 +164,12 @@ describe('AppShellComponent titlebar', () => {
         { provide: UpdatesStore, useValue: updatesStore },
         { provide: JobsStore, useValue: jobsStore },
         { provide: SettingsStore, useValue: settingsStore },
+        { provide: TemplatesStore, useValue: templatesStore },
+        { provide: PackageDetailsStore, useValue: packageDetailsStore },
+        { provide: PackageActionsService, useValue: packageActions },
         { provide: BrewFacadeService, useValue: facade },
-        { provide: ToastService, useValue: toast }
+        { provide: ToastService, useValue: toast },
+        PackageSelectionStore
       ]
     }).compileComponents();
 

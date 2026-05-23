@@ -4,20 +4,62 @@
 
       <section class="fixed left-1/2 top-20 z-50 w-[600px] max-w-[92vw] -translate-x-1/2" (click)="$event.stopPropagation()">
         <z-command class="overflow-hidden rounded-xl border border-border bg-popover shadow-2xl" (zCommandSelected)="onCommandSelected($event)">
-          <z-command-input placeholder="Type a command or search..." />
-          <z-command-list>
-            <z-command-empty>No matching actions.</z-command-empty>
+          @if (mode() !== 'root') {
+            <div class="border-b border-border px-3 py-2">
+              <button type="button" class="text-xs text-muted-foreground hover:text-foreground" (click)="onBackClick()">
+                ← Back
+              </button>
+            </div>
+          }
 
-            <z-command-option-group zLabel="Actions">
-              @for (action of actions(); track action.id) {
-                <z-command-option
-                  [zValue]="action.id"
-                  [zLabel]="action.label"
-                  [zCommand]="action.label + ' ' + action.hint"
-                  [zShortcut]="action.hint"
-                />
+          <z-command-input [placeholder]="placeholder()" />
+          <z-command-list>
+            <z-command-empty>
+              @if (mode() === 'pickPackage') {
+                No matching packages.
+              } @else if (mode() === 'pickTemplate') {
+                No matching templates.
+              } @else {
+                No matching actions.
               }
-            </z-command-option-group>
+            </z-command-empty>
+
+            @if (mode() === 'root') {
+              @for (group of actionGroups(); track group[0]) {
+                <z-command-option-group [zLabel]="group[0]">
+                  @for (action of group[1]; track action.id) {
+                    <z-command-option
+                      [zValue]="action.id"
+                      [zLabel]="action.label"
+                      [zCommand]="action.label + ' ' + action.hint"
+                      [zShortcut]="action.hint"
+                    />
+                  }
+                </z-command-option-group>
+              }
+            } @else if (mode() === 'pickPackage') {
+              <z-command-option-group zLabel="Packages">
+                @for (item of filteredPackages(); track item.id) {
+                  <z-command-option
+                    [zValue]="item.id"
+                    [zLabel]="item.label"
+                    [zCommand]="item.label + ' ' + item.hint"
+                    [zShortcut]="item.hint"
+                  />
+                }
+              </z-command-option-group>
+            } @else {
+              <z-command-option-group zLabel="Templates">
+                @for (item of filteredTemplates(); track item.id) {
+                  <z-command-option
+                    [zValue]="item.id"
+                    [zLabel]="item.label"
+                    [zCommand]="item.label"
+                    [zShortcut]="item.hint"
+                  />
+                }
+              </z-command-option-group>
+            }
           </z-command-list>
         </z-command>
       </section>
