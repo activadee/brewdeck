@@ -3,8 +3,9 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "type": "npm",
-      "script": "start",
+      "label": "start",
+      "type": "shell",
+      "command": "bun run start",
       "isBackground": true,
       "problemMatcher": {
         "owner": "typescript",
@@ -21,8 +22,9 @@
       }
     },
     {
-      "type": "npm",
-      "script": "test",
+      "label": "test",
+      "type": "shell",
+      "command": "bun run test",
       "isBackground": true,
       "problemMatcher": {
         "owner": "typescript",

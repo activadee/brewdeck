@@ -11,10 +11,9 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: '22'
-          cache: npm
-      - run: npm ci
-      - run: npm run test:all
-      - run: npm run build
+          bun-version: 1.3.3
+      - run: bun install --frozen-lockfile
+      - run: bun run test:all
+      - run: bun run build
