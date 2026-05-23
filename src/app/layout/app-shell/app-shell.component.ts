@@ -592,6 +592,17 @@ export class AppShellComponent {
         if (event.action !== 'syncMetadata') {
           this.toast.push(`Homebrew command failed: ${event.error}`, 'error', 6_000);
         }
+      }),
+      this.facade.onUpdateAvailable((event) => {
+        this.toast.pushWithAction(
+          `Brew Sidebar ${event.version} is ready to install.`,
+          'info',
+          {
+            label: 'Restart to update',
+            run: () => this.facade.quitAndInstallUpdate()
+          },
+          30_000
+        );
       })
     ];
 

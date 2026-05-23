@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 
 import type {
   ActionTemplate,
+  AppUpdateAvailableEvent,
   AppSettings,
   AppSettingsUpdate,
   BatchJobResult,
@@ -241,5 +242,13 @@ export class BrewFacadeService {
 
   onJobFailed(handler: (event: BrewJobFailedEvent) => void): () => void {
     return this.bridge.api.onJobFailed(handler);
+  }
+
+  onUpdateAvailable(handler: (event: AppUpdateAvailableEvent) => void): () => void {
+    return this.bridge.api.onUpdateAvailable(handler);
+  }
+
+  quitAndInstallUpdate(): Promise<void> {
+    return this.bridge.api.quitAndInstallUpdate();
   }
 }

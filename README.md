@@ -50,30 +50,32 @@ bun run package:mac
 
 Outputs are generated in `release/`.
 
-## GitHub Release (unsigned DMG)
+## GitHub Release (unsigned)
 
-Pushing a version tag builds a macOS DMG on GitHub Actions and attaches it to a GitHub Release:
+Pushing a version tag builds unsigned macOS artifacts on GitHub Actions and publishes them to a GitHub Release (DMG for manual install, ZIP + `latest-mac.yml` for in-app auto-update):
 
 ```bash
 git tag v0.5.0
 git push origin v0.5.0
 ```
 
-You can also run the **Release** workflow manually from the Actions tab (`workflow_dispatch`); artifacts are uploaded to the workflow run (no GitHub Release unless you use a tag).
+You can also run the **Release** workflow manually from the Actions tab (`workflow_dispatch`); artifacts are uploaded to the workflow run only (no GitHub Release unless you push a tag).
 
-The CI job sets `CSC_IDENTITY_AUTO_DISCOVERY=false`, so builds are **unsigned**. macOS may block first launch until the user uses **Right-click → Open** (see Signing below).
+The CI job sets `CSC_IDENTITY_AUTO_DISCOVERY=false`, so builds are **unsigned**. macOS Gatekeeper may block first launch (and sometimes updated installs) until the user uses **Right-click → Open** or allows the app in **System Settings → Privacy & Security**.
 
-## Auto-update readiness
+### In-app auto-update (unsigned)
 
-`electron-builder` publish config is intentionally set to a placeholder URL:
+Release CI sets `ENABLE_AUTO_UPDATES=1` when packaging. Packaged apps with that flag check [GitHub Releases](https://github.com/activadee/brew-gui/releases) via `electron-updater` (GitHub provider in `package.json`). When a newer tag is published, the app downloads the ZIP in the background and shows **Restart to update** in a toast.
 
-- `https://example.com/auto-updates/`
+Limitations without code signing / notarization:
 
-Replace this and provide signing/notarization secrets in CI before enabling release auto-updates. Set `ENABLE_AUTO_UPDATES=1` in packaged builds to enable the updater.
+- Updates still rely on tagged releases (`v*`); local `package:mac` builds do not publish metadata.
+- macOS may quarantine downloaded updates the same way as a fresh DMG install.
+- Auto-update uses the **ZIP** artifact, not the DMG.
 
-### Signing (release tags)
+### Signing (optional, for stricter Gatekeeper)
 
-Documented environment variables for macOS release:
+Documented environment variables for signed/notarized macOS release:
 
 - `CSC_LINK` — code signing certificate
 - `CSC_KEY_PASSWORD` — certificate password
@@ -83,7 +85,7 @@ Documented environment variables for macOS release:
 
 Main channels (request-response):
 
-- `app:openMain`, `app:windowControl`, `app:getWindowChrome`
+- `app:openMain`, `app:windowControl`, `app:getWindowChrome`, `app:quitAndInstallUpdate`
 - `brew:getAvailability`, `brew:getInstalled`, `brew:getOutdated`
 - `brew:getTaps`, `brew:getServices`, `brew:getPackageDetails`
 - `brew:searchCatalog`

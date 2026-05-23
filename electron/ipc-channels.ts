@@ -2,6 +2,7 @@ export const IPC_CHANNELS = {
   APP_OPEN_MAIN: 'app:openMain',
   APP_WINDOW_CONTROL: 'app:windowControl',
   APP_GET_WINDOW_CHROME: 'app:getWindowChrome',
+  APP_QUIT_AND_INSTALL_UPDATE: 'app:quitAndInstallUpdate',
   GET_BREW_AVAILABILITY: 'brew:getAvailability',
   GET_INSTALLED: 'brew:getInstalled',
   GET_OUTDATED: 'brew:getOutdated',

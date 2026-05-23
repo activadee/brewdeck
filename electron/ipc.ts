@@ -41,6 +41,7 @@ import {
   type WindowChromeState
 } from '../src/shared/contracts';
 import { IPC_CHANNELS } from './ipc-channels';
+import { quitAndInstallUpdate } from './services/auto-update';
 import { ActionTemplateRunner } from './services/action-template-runner';
 import { ActionTemplatesStore } from './services/action-templates-store';
 import { ActiveJobsStore } from './services/active-jobs-store';
@@ -115,6 +116,9 @@ export function registerIpcHandlers(options: RegisterIpcOptions): void {
   ipcMain.handle(IPC_CHANNELS.APP_GET_WINDOW_CHROME, () =>
     windowChromeStateSchema.parse(getWindowChromeState())
   );
+  ipcMain.handle(IPC_CHANNELS.APP_QUIT_AND_INSTALL_UPDATE, async () => {
+    await quitAndInstallUpdate();
+  });
 
   ipcMain.handle(IPC_CHANNELS.GET_BREW_AVAILABILITY, async () => homebrew.getBrewAvailability());
   ipcMain.handle(IPC_CHANNELS.GET_INSTALLED, async () => homebrew.getInstalled());

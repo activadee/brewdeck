@@ -129,7 +129,9 @@ describe('AppShellComponent titlebar', () => {
       onJobFailed: vi.fn((handler: (event: BrewJobFailedEvent) => void) => {
         onJobFailedHandler = handler;
         return () => undefined;
-      })
+      }),
+      onUpdateAvailable: vi.fn(() => () => undefined),
+      quitAndInstallUpdate: vi.fn(async () => undefined)
     };
 
     const toast = {

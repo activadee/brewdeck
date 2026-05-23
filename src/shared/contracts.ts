@@ -716,6 +716,7 @@ export interface BrewGuiBridge {
   openMainWindow(): Promise<void>;
   windowControl(action: WindowControlAction): Promise<void>;
   getWindowChromeState(): Promise<WindowChromeState>;
+  quitAndInstallUpdate(): Promise<void>;
   getBrewAvailability(): Promise<BrewAvailability>;
   getInstalled(): Promise<InstalledPackage[]>;
   getOutdated(): Promise<OutdatedPackage[]>;

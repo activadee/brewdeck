@@ -20,6 +20,7 @@
     "test:node": "vitest run",
     "test:all": "bun run test && bun run test:node",
     "package:mac": "bun run build && electron-builder --mac",
+    "package:mac:publish": "bun run build && electron-builder --mac --publish always",
     "package:dir": "bun run build && electron-builder --dir"
   },
   "prettier": {
@@ -100,8 +101,9 @@
     },
     "publish": [
       {
-        "provider": "generic",
-        "url": "https://example.com/auto-updates/"
+        "provider": "github",
+        "owner": "activadee",
+        "repo": "brew-gui"
       }
     ],
     "extraMetadata": {

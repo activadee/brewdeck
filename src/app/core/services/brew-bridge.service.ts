@@ -67,6 +67,9 @@ const createFallbackBridge = (): BrewGuiBridge => ({
   async getWindowChromeState(): Promise<WindowChromeState> {
     return DEFAULT_WINDOW_CHROME_STATE;
   },
+  async quitAndInstallUpdate(): Promise<void> {
+    return undefined;
+  },
   async getBrewAvailability() {
     return {
       available: false,

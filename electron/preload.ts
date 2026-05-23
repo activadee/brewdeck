@@ -66,6 +66,10 @@ const api: BrewGuiBridge = {
     return windowChromeStateSchema.parse(payload);
   },
 
+  async quitAndInstallUpdate() {
+    await ipcRenderer.invoke(IPC_CHANNELS.APP_QUIT_AND_INSTALL_UPDATE);
+  },
+
   async getBrewAvailability() {
     const payload = await ipcRenderer.invoke(IPC_CHANNELS.GET_BREW_AVAILABILITY);
     return brewAvailabilitySchema.parse(payload);

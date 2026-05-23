@@ -19,10 +19,6 @@ export function configureAutoUpdate(onUpdateAvailable?: (event: AppUpdateAvailab
 
   autoUpdater.on('update-available', (info) => {
     log.info('Update available', { version: info.version, correlationId: 'auto-update' });
-    onUpdateAvailable?.({
-      version: info.version,
-      releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : null
-    });
   });
 
   autoUpdater.on('update-not-available', () => {
@@ -31,6 +27,10 @@ export function configureAutoUpdate(onUpdateAvailable?: (event: AppUpdateAvailab
 
   autoUpdater.on('update-downloaded', (info) => {
     log.info('Update downloaded; restart to apply', { version: info.version, correlationId: 'auto-update' });
+    onUpdateAvailable?.({
+      version: info.version,
+      releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : null
+    });
   });
 
   void autoUpdater.checkForUpdates();
