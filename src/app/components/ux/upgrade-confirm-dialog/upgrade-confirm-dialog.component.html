@@ -9,6 +9,26 @@
               <p class="mt-1 text-sm text-muted-foreground">{{ message() }}</p>
             </div>
 
+            @if (installedVersion() && currentVersion()) {
+              <p class="text-sm">
+                <span class="mono text-muted-foreground">{{ installedVersion() }}</span>
+                <span class="mx-1 text-muted-foreground">→</span>
+                <span class="mono font-medium">{{ currentVersion() }}</span>
+              </p>
+            }
+
+            @if (changelogSnippet()) {
+              <p class="text-xs text-muted-foreground">{{ changelogSnippet() }}</p>
+            } @else if (installedVersion() && currentVersion()) {
+              <p class="text-xs text-muted-foreground">Changelog unavailable.</p>
+            }
+
+            @if (showForceOption()) {
+              <z-checkbox [ngModel]="forceSelected()" (ngModelChange)="forceSelectedChange.emit($event)">
+                <span class="text-sm">Force install (<span class="mono">--force</span>)</span>
+              </z-checkbox>
+            }
+
             @if (commandPreview()) {
               <pre class="overflow-x-auto rounded-md border border-border bg-muted/40 p-2 text-[11px] mono">{{ commandPreview() }}</pre>
             }
