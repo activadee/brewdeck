@@ -77,9 +77,9 @@ Brew Sidebar becomes the safest and fastest desktop control plane for Homebrew: 
   - CLI-style troubleshooting with copyable diagnostic output.
 - [x] Keyboard command palette expansion (completed May 23, 2026):
   - “Install package…”, “Uninstall package…”, “Pin package…”.
-- Undo-safe patterns:
+- [x] Undo-safe patterns (completed May 23, 2026):
   - Post-action “revert” affordance where feasible (for non-destructive ops).
-- Diff preview:
+- [x] Diff preview (completed May 23, 2026):
   - Before/after version diff for upgrades.
 
 ## Reliability and Security

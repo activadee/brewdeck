@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.5.0 — 2026-05-23
+
+### Added
+- `PackageActionsService` centralizing install/uninstall/upgrade/pin/batch/template flows
+- Multi-select batch uninstall and pin on Installed and Updates with batch confirm dialog
+- Nested command palette (`root` / `pickPackage` / `pickTemplate`) with bulk selection actions
+- Action template CRUD in Settings (edit, delete, reorder steps, client validation)
+- Run template from row overflow menus and palette
+- Job recovery banner after restart (`recoverJobs`)
+- Uninstall dependency-impact section in confirm dialog
+- Advanced install `--force` option when enabled in Settings
+- `DiagnosticPanel` on brew-missing, list errors, and failed activity jobs
+- Undo toasts for pin and smart-upgrade exclusions; upgrade version diff in confirm
+
+### Changed
+- History view success badges use default variant
+- Toast host supports action buttons for undo flows
+
 ## 0.4.0 — 2026-05-23
 
 ### Added
