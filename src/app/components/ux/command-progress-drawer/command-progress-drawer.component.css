@@ -1,0 +1,17 @@
+.activity-log-drawer {
+  max-height: min(32rem, calc(100vh - 1.5rem));
+  overflow: hidden;
+}
+
+.activity-log-drawer [data-slot='card-content'] {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.activity-log-filters,
+.activity-log-filters > * {
+  min-width: 0;
+}

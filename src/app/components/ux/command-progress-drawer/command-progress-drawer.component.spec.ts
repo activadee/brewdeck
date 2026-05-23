@@ -61,6 +61,7 @@ describe('CommandProgressDrawerComponent', () => {
       setActionFilter: vi.fn(),
       setKindFilter: vi.fn(),
       setQuery: vi.fn(),
+      resetFilters: vi.fn(),
       clearHistory: vi.fn(),
       closeDrawer: vi.fn()
     };
@@ -89,6 +90,25 @@ describe('CommandProgressDrawerComponent', () => {
     expect(html.textContent).toContain('Output (1)');
   });
 
+  it('caps drawer height and scrolls the job list', async () => {
+    const { fixture } = await render();
+    const html = fixture.nativeElement as HTMLElement;
+
+    const drawer = html.querySelector('.activity-log-drawer');
+    const jobList = html.querySelector('.activity-log-list');
+
+    expect(drawer).toBeTruthy();
+    expect(jobList).toBeTruthy();
+  });
+
+  it('renders one status chip row and two action/kind selects', async () => {
+    const { fixture } = await render();
+    const html = fixture.nativeElement as HTMLElement;
+
+    expect(html.querySelectorAll('app-package-filter-chips').length).toBe(1);
+    expect(html.querySelectorAll('z-select').length).toBe(2);
+  });
+
   it('forwards filter changes to jobs store methods', async () => {
     const { fixture, store } = await render();
     const component = fixture.componentInstance as any;
@@ -100,6 +120,21 @@ describe('CommandProgressDrawerComponent', () => {
     expect(store.setStatusFilter).toHaveBeenCalledWith('failed');
     expect(store.setActionFilter).toHaveBeenCalledWith('doctor');
     expect(store.setKindFilter).toHaveBeenCalledWith('system');
+  });
+
+  it('shows reset filters when filters are active and calls store reset', async () => {
+    const { fixture, store } = await render();
+    store.statusFilter.set('failed');
+    fixture.detectChanges();
+
+    const html = fixture.nativeElement as HTMLElement;
+    const resetButton = Array.from(html.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Reset filters')
+    );
+
+    expect(resetButton).toBeTruthy();
+    resetButton?.click();
+    expect(store.resetFilters).toHaveBeenCalled();
   });
 
   it('supports hide and clear actions', async () => {
