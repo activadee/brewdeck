@@ -1,8 +1,9 @@
 
     @if (jobsStore.drawerOpen()) {
       <section class="fixed bottom-3 left-3 right-3 z-50">
-        <z-card class="border-border/70 bg-card/95 shadow-2xl backdrop-blur ui-shell-enter">
-          <header class="space-y-2 px-1">
+        <z-card class="activity-log-drawer border-border/70 bg-card/95 shadow-2xl backdrop-blur ui-shell-enter">
+          <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <header class="shrink-0 space-y-2 px-1">
             <div class="flex items-center justify-between gap-2">
               <div class="space-y-1">
                 <p class="mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Brew Activity Log</p>
@@ -25,34 +26,71 @@
               </div>
             </div>
 
-            <div class="grid gap-1.5 lg:grid-cols-3">
-              <app-package-filter-chips
-                [selected]="jobsStore.statusFilter()"
-                [options]="statusFilterOptions()"
-                (selectedChange)="onStatusFilterChange($event)"
-              />
-              <app-package-filter-chips
-                [selected]="jobsStore.actionFilter()"
-                [options]="actionFilterOptions"
-                (selectedChange)="onActionFilterChange($event)"
-              />
-              <app-package-filter-chips
-                [selected]="jobsStore.kindFilter()"
-                [options]="kindFilterOptions"
-                (selectedChange)="onKindFilterChange($event)"
+            <div class="activity-log-filters space-y-2">
+              <div class="min-w-0 w-full">
+                <app-package-filter-chips
+                  [selected]="jobsStore.statusFilter()"
+                  [options]="statusFilterOptions()"
+                  (selectedChange)="onStatusFilterChange($event)"
+                />
+              </div>
+
+              <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end">
+                <div class="min-w-0 w-full space-y-1 sm:flex-1">
+                  <label class="text-[10px] uppercase tracking-wide text-muted-foreground">Action</label>
+                  <z-select
+                    zSize="sm"
+                    class="w-full"
+                    [zValue]="jobsStore.actionFilter()"
+                    [zLabel]="actionFilterLabel()"
+                    (zSelectionChange)="onActionFilterChange($event)"
+                  >
+                    @for (opt of actionFilterOptions; track opt.value) {
+                      <z-select-item [zValue]="opt.value">{{ opt.label }}</z-select-item>
+                    }
+                  </z-select>
+                </div>
+
+                <div class="min-w-0 w-full space-y-1 sm:flex-1">
+                  <label class="text-[10px] uppercase tracking-wide text-muted-foreground">Kind</label>
+                  <z-select
+                    zSize="sm"
+                    class="w-full"
+                    [zValue]="jobsStore.kindFilter()"
+                    [zLabel]="kindFilterLabel()"
+                    (zSelectionChange)="onKindFilterChange($event)"
+                  >
+                    @for (opt of kindFilterOptions; track opt.value) {
+                      <z-select-item [zValue]="opt.value">{{ opt.label }}</z-select-item>
+                    }
+                  </z-select>
+                </div>
+
+                @if (hasActiveFilters()) {
+                  <button
+                    type="button"
+                    z-button
+                    zType="ghost"
+                    zSize="sm"
+                    class="shrink-0"
+                    (click)="resetFilters()"
+                  >
+                    Reset filters
+                  </button>
+                }
+              </div>
+
+                <app-package-search-input
+                [value]="jobsStore.query()"
+                placeholder="Search command, package, or output"
+                (valueChange)="jobsStore.setQuery($event)"
               />
             </div>
-
-            <app-package-search-input
-              [value]="jobsStore.query()"
-              placeholder="Search command, package, or output"
-              (valueChange)="jobsStore.setQuery($event)"
-            />
           </header>
 
-          <z-divider zSpacing="sm" />
+          <z-divider zSpacing="sm" class="shrink-0" />
 
-          <div class="max-h-[22rem] overflow-y-auto px-1 pb-1">
+          <div class="activity-log-list min-h-0 flex-1 overflow-y-auto px-1 pb-1">
             @if (jobsStore.filteredJobs().length === 0) {
               <p class="py-6 text-center text-xs text-muted-foreground">No jobs match the current filters.</p>
             } @else {
@@ -121,6 +159,7 @@
                 }
               </div>
             }
+          </div>
           </div>
         </z-card>
       </section>

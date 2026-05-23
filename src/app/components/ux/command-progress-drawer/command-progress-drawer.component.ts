@@ -4,6 +4,7 @@ import { ZardBadgeComponent } from '@/shared/components/badge';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
 import { ZardDividerComponent } from '@/shared/components/divider';
+import { ZardSelectImports } from '@/shared/components/select';
 import { PackageFilterChipsComponent } from '../../shared/package-filter-chips/package-filter-chips.component';
 import { PackageSearchInputComponent } from '../../shared/package-search-input/package-search-input.component';
 import { DiagnosticPanelComponent } from '../diagnostic-panel/diagnostic-panel.component';
@@ -18,7 +19,8 @@ import { JobsStore, type JobActionFilter, type JobKindFilter, type JobStatusFilt
     ZardDividerComponent,
     PackageFilterChipsComponent,
     PackageSearchInputComponent,
-    DiagnosticPanelComponent
+    DiagnosticPanelComponent,
+    ...ZardSelectImports
   ],
   templateUrl: './command-progress-drawer.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -61,15 +63,46 @@ export class CommandProgressDrawerComponent {
     { value: 'system', label: 'System' }
   ];
 
+  protected readonly hasActiveFilters = computed(
+    () =>
+      this.jobsStore.statusFilter() !== 'all' ||
+      this.jobsStore.actionFilter() !== 'all' ||
+      this.jobsStore.kindFilter() !== 'all' ||
+      this.jobsStore.query().trim().length > 0
+  );
+
+  protected readonly actionFilterLabel = computed(
+    () =>
+      this.actionFilterOptions.find((option) => option.value === this.jobsStore.actionFilter())?.label ??
+      'All actions'
+  );
+
+  protected readonly kindFilterLabel = computed(
+    () =>
+      this.kindFilterOptions.find((option) => option.value === this.jobsStore.kindFilter())?.label ?? 'All kinds'
+  );
+
+  protected resetFilters(): void {
+    this.jobsStore.resetFilters();
+  }
+
   protected onStatusFilterChange(value: string): void {
     this.jobsStore.setStatusFilter(value as JobStatusFilter);
   }
 
-  protected onActionFilterChange(value: string): void {
+  protected onActionFilterChange(value: string | string[]): void {
+    if (Array.isArray(value)) {
+      return;
+    }
+
     this.jobsStore.setActionFilter(value as JobActionFilter);
   }
 
-  protected onKindFilterChange(value: string): void {
+  protected onKindFilterChange(value: string | string[]): void {
+    if (Array.isArray(value)) {
+      return;
+    }
+
     this.jobsStore.setKindFilter(value as JobKindFilter);
   }
 
