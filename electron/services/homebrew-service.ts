@@ -43,8 +43,14 @@ import type {
   ServiceRequest,
   UnpinOneRequest,
   UninstallOneRequest,
-  UpgradeOneRequest
+  UpgradeOneRequest,
+  BatchJobResult,
+  BatchManyRequest,
+  UninstallImpactRequest,
+  UninstallImpactResponse
 } from '../../src/shared/contracts';
+import { batchManyRequestSchema } from '../../src/shared/contracts';
+import { buildAllowedCommand } from './brew-command-registry';
 import { searchCatalogRequestSchema } from '../../src/shared/contracts';
 import { log } from '../utils/logger';
 import { CatalogCache } from './catalog-cache';
@@ -138,9 +144,10 @@ export interface JobEventSink {
 }
 
 export function buildInstallCommand(request: InstallOneRequest): string[] {
+  const forceArgs = request.force ? ['--force'] : [];
   return request.kind === 'formula'
-    ? ['install', '--formula', request.name]
-    : ['install', '--cask', request.name];
+    ? ['install', '--formula', ...forceArgs, request.name]
+    : ['install', '--cask', ...forceArgs, request.name];
 }
 
 export function buildReinstallCommand(request: ReinstallOneRequest): string[] {
@@ -663,6 +670,44 @@ export class HomebrewService {
     });
   }
 
+  async getUninstallImpact(request: UninstallImpactRequest): Promise<UninstallImpactResponse> {
+    if (request.kind === 'cask') {
+      return {
+        dependents: [],
+        note: 'Cask uninstall impact depends on app data; review before removing.'
+      };
+    }
+
+    const command = buildAllowedCommand('uses.installed', { name: request.name });
+    const result = await this.runner.runText(command, { timeoutMs: 60_000, allowAutoUpdate: false });
+    const dependents = result.stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    return { dependents, note: null };
+  }
+
+  async upgradeMany(request: BatchManyRequest, sink: JobEventSink): Promise<BatchJobResult> {
+    const parsed = batchManyRequestSchema.parse(request);
+    return this.runBatch(parsed, sink, (item) => this.upgradeOne(item, sink));
+  }
+
+  async uninstallMany(request: BatchManyRequest, sink: JobEventSink): Promise<BatchJobResult> {
+    const parsed = batchManyRequestSchema.parse(request);
+    return this.runBatch(parsed, sink, (item) => this.uninstallOne(item, sink));
+  }
+
+  async pinMany(request: BatchManyRequest, sink: JobEventSink): Promise<BatchJobResult> {
+    const parsed = batchManyRequestSchema.parse(request);
+    const formulaOnly = parsed.items.filter((item) => item.kind === 'formula');
+    return this.runBatch(
+      { items: formulaOnly },
+      sink,
+      (item) => this.pinOne({ kind: 'formula', name: item.name }, sink)
+    );
+  }
+
   async runCleanup(sink: JobEventSink): Promise<BrewJobCompleteEvent> {
     return this.runQueuedTrackedJob({
       action: 'cleanup',
@@ -1148,6 +1193,42 @@ export class HomebrewService {
       },
       60 * 60 * 1000
     );
+  }
+
+  private async runBatch(
+    request: BatchManyRequest,
+    sink: JobEventSink,
+    runItem: (item: BatchManyRequest['items'][number]) => Promise<BrewJobCompleteEvent>
+  ): Promise<BatchJobResult> {
+    const results: BatchJobResult['results'] = [];
+
+    for (const item of request.items) {
+      try {
+        const completion = await runItem(item);
+        results.push({
+          kind: item.kind,
+          name: item.name,
+          success: completion.success,
+          jobId: completion.jobId,
+          error: completion.success ? null : 'Job failed'
+        });
+      } catch (error) {
+        results.push({
+          kind: item.kind,
+          name: item.name,
+          success: false,
+          jobId: randomUUID(),
+          error: (error as Error).message
+        });
+      }
+    }
+
+    const succeeded = results.filter((result) => result.success).length;
+    return {
+      results,
+      succeeded,
+      failed: results.length - succeeded
+    };
   }
 
   private runQueuedTrackedJob(options: QueuedTrackedJobOptions): Promise<BrewJobCompleteEvent> {

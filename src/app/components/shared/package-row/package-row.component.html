@@ -1,6 +1,15 @@
 
     <z-card class="fade-up border-border/70 bg-card/95 shadow-sm">
       <div class="flex items-start justify-between gap-2">
+        @if (selectable()) {
+          <input
+            type="checkbox"
+            class="mt-1"
+            [checked]="selected()"
+            (change)="selectionChange.emit($any($event.target).checked)"
+            (click)="$event.stopPropagation()"
+          />
+        }
         <div class="min-w-0">
           <h4 class="truncate text-sm font-semibold">{{ name() }}</h4>
           @if (desc()) {

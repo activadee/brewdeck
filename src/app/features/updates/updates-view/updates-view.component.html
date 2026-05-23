@@ -73,9 +73,20 @@
           [description]="emptyStateDescription()"
         />
       } @else {
+        @if (selectionStore.count() > 0) {
+          <div class="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-muted/20 p-2">
+            <span class="text-sm">{{ selectionStore.count() }} selected</span>
+            <button type="button" z-button zSize="sm" (click)="batchUpgradeSelected()">Upgrade selected</button>
+            <button type="button" z-button zType="outline" zSize="sm" (click)="selectionStore.clear()">Clear</button>
+          </div>
+        }
+
         <div class="stagger-list space-y-1.5">
           @for (item of channelFilteredItems(); track item.id) {
             <app-package-row
+              [selectable]="true"
+              [selected]="selectionStore.isSelected(item.id)"
+              (selectionChange)="selectionStore.toggle(item.id)"
               [name]="item.name"
               [kind]="item.kind"
               [desc]="versionLabel(item)"

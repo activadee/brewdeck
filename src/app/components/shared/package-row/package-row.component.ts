@@ -39,7 +39,10 @@ export class PackageRowComponent {
   readonly actionDisabled = input(false);
   readonly actionVariant = input<'primary' | 'secondary'>('secondary');
   readonly overflowActions = input<PackageRowOverflowAction[]>([]);
+  readonly selectable = input(false);
+  readonly selected = input(false);
 
   readonly action = output<void>();
   readonly overflowAction = output<string>();
+  readonly selectionChange = output<boolean>();
 }

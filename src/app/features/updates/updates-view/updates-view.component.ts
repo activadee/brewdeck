@@ -16,8 +16,10 @@ import { PackageSearchInputComponent } from '../../../components/shared/package-
 import { SmartUpgradeDialogComponent } from '../../../components/ux/smart-upgrade-dialog/smart-upgrade-dialog.component';
 import { UpdateSummaryCardComponent } from '../../../components/ux/update-summary-card/update-summary-card.component';
 import { UpgradeConfirmDialogComponent } from '../../../components/ux/upgrade-confirm-dialog/upgrade-confirm-dialog.component';
+import { BrewFacadeService } from '../../../core/services/brew-facade.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { InstalledStore } from '../../../core/stores/installed.store';
+import { PackageSelectionStore } from '../../../core/stores/package-selection.store';
 import { PackageDetailsStore } from '../../../core/stores/package-details.store';
 import { UpdatesStore } from '../../../core/stores/updates.store';
 import {
@@ -49,6 +51,8 @@ export class UpdatesViewComponent {
   protected readonly installedStore = inject(InstalledStore);
   protected readonly packageDetailsStore = inject(PackageDetailsStore);
   private readonly toast = inject(ToastService);
+  private readonly facade = inject(BrewFacadeService);
+  protected readonly selectionStore = inject(PackageSelectionStore);
 
   protected readonly filterOptions = [
     { value: 'all', label: 'All' },
@@ -364,5 +368,24 @@ export class UpdatesViewComponent {
 
   private defaultSelectedRisks(plan: SmartUpgradePlan): SmartUpgradeRiskLevel[] {
     return this.smartRiskOptions.filter((risk) => plan.totals[risk] > 0);
+  }
+
+  protected async batchUpgradeSelected(): Promise<void> {
+    const ids = this.selectionStore.selectedIds();
+    const items = this.channelFilteredItems().filter(
+      (item) => ids.includes(item.id) && this.canUpgrade(item)
+    );
+
+    if (items.length === 0) {
+      return;
+    }
+
+    const result = await this.facade.upgradeMany({
+      items: items.map((item) => ({ kind: item.kind, name: item.name }))
+    });
+
+    this.selectionStore.clear();
+    this.toast.push(`Batch upgrade finished (${result.succeeded}/${items.length} succeeded).`, 'success');
+    await this.updatesStore.checkNow();
   }
 }
