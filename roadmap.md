@@ -71,11 +71,11 @@ Brew Sidebar becomes the safest and fastest desktop control plane for Homebrew: 
   - Time-to-complete and failure-rate insights.
 
 ## UX Improvements
-- Multi-select package actions:
+- [x] Multi-select package actions (completed May 23, 2026):
   - Install/uninstall/upgrade selected packages in one job queue.
-- Better empty/error states:
+- [x] Better empty/error states (completed May 23, 2026):
   - CLI-style troubleshooting with copyable diagnostic output.
-- Keyboard command palette expansion:
+- [x] Keyboard command palette expansion (completed May 23, 2026):
   - “Install package…”, “Uninstall package…”, “Pin package…”.
 - Undo-safe patterns:
   - Post-action “revert” affordance where feasible (for non-destructive ops).
@@ -83,20 +83,23 @@ Brew Sidebar becomes the safest and fastest desktop control plane for Homebrew: 
   - Before/after version diff for upgrades.
 
 ## Reliability and Security
-- Safer command executor:
+- [x] Safer command executor (completed May 23, 2026):
   - Strict command allowlist with typed params only.
   - Defensive validation for all IPC inputs.
-- Crash resilience:
+- [x] Crash resilience (completed May 23, 2026):
   - Recover and display unfinished jobs after restart.
-- Structured logging:
+- [x] Structured logging (completed May 23, 2026):
   - Separate renderer/main logs with correlation IDs per job.
-- Telemetry (optional, local-first by default):
+- [x] Telemetry (optional, local-first by default) (completed May 23, 2026):
   - Opt-in anonymized event telemetry for UX improvements.
 
 ## Platform and Distribution
+- [x] CI pipeline (completed May 23, 2026):
+  - macOS GitHub Actions for test:all and build.
 - Production release pipeline:
   - Harden notarization/signing automation.
-  - Auto-update feed setup and staged rollout.
+- [x] Auto-update event wiring (completed May 23, 2026):
+  - Download + renderer notification (staged via ENABLE_AUTO_UPDATES).
 - Apple Silicon and Intel validation matrix.
 - Better icon and branding pack:
   - Full app icon set + polished tray variants for all menu bar states.
