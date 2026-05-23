@@ -50,6 +50,19 @@ bun run package:mac
 
 Outputs are generated in `release/`.
 
+## GitHub Release (unsigned DMG)
+
+Pushing a version tag builds a macOS DMG on GitHub Actions and attaches it to a GitHub Release:
+
+```bash
+git tag v0.5.0
+git push origin v0.5.0
+```
+
+You can also run the **Release** workflow manually from the Actions tab (`workflow_dispatch`); artifacts are uploaded to the workflow run (no GitHub Release unless you use a tag).
+
+The CI job sets `CSC_IDENTITY_AUTO_DISCOVERY=false`, so builds are **unsigned**. macOS may block first launch until the user uses **Right-click → Open** (see Signing below).
+
 ## Auto-update readiness
 
 `electron-builder` publish config is intentionally set to a placeholder URL:
