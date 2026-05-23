@@ -15,6 +15,23 @@
               </z-checkbox>
             }
 
+            @if (impactLoading()) {
+              <p class="text-xs text-muted-foreground">Checking dependent formulae…</p>
+            } @else if (dependents().length > 0) {
+              <div class="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-sm">
+                <p class="font-medium text-destructive">Dependent formulae may break</p>
+                <ul class="mt-1 max-h-24 space-y-0.5 overflow-y-auto text-xs text-muted-foreground">
+                  @for (dep of dependents(); track dep) {
+                    <li class="mono">{{ dep }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            @if (impactNote()) {
+              <p class="text-xs text-muted-foreground">{{ impactNote() }}</p>
+            }
+
             @if (commandPreview()) {
               <pre class="overflow-x-auto rounded-md border border-border bg-muted/40 p-2 text-[11px] mono">{{ commandPreview() }}</pre>
             }

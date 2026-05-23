@@ -21,6 +21,9 @@ export class UninstallConfirmDialogComponent {
   readonly commandPreview = input<string | null>(null);
   readonly kind = input<PackageKind | null>(null);
   readonly zapSelected = input(false);
+  readonly dependents = input<string[]>([]);
+  readonly impactLoading = input(false);
+  readonly impactNote = input<string | null>(null);
   readonly busy = input(false);
 
   readonly confirm = output<void>();
