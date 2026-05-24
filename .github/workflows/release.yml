@@ -118,9 +118,8 @@ jobs:
         run: npm run test:all
 
       - name: Build macOS artifacts (unsigned)
-        run: npm run package:mac
+        run: npm run package:mac:ci
         env:
-          ENABLE_AUTO_UPDATES: '1'
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload release artifacts
@@ -269,9 +268,8 @@ jobs:
         run: npm run test:all
 
       - name: Build macOS artifacts (unsigned, no publish)
-        run: npm run package:mac
+        run: npm run package:mac:ci
         env:
-          ENABLE_AUTO_UPDATES: '1'
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload build artifacts
