@@ -30,7 +30,14 @@ export class SidebarNavComponent {
   protected readonly appUpdateStore = inject(AppUpdateStore);
   private readonly settingsStore = inject(SettingsStore);
 
-  protected readonly versionLabel = computed(() => this.settingsStore.settings().appReleaseChannel);
+  protected readonly versionLabel = computed(() => {
+    const version = this.appUpdateStore.currentVersion();
+    const channel = this.settingsStore.settings().appReleaseChannel;
+    if (!version) {
+      return channel;
+    }
+    return `v${version} · ${channel}`;
+  });
 
   protected readonly navItems = [
     { label: 'Updates', route: '/updates' },

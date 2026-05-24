@@ -64,13 +64,14 @@ describe('SidebarNavComponent', () => {
     expect(html.textContent).toContain('Doctor');
   });
 
-  it('shows release channel in the sidebar footer', async () => {
+  it('shows version and release channel in the sidebar footer', async () => {
     await configure({}, 'stable').compileComponents();
 
     const fixture = TestBed.createComponent(SidebarNavComponent);
     fixture.detectChanges();
 
     const footer = (fixture.nativeElement as HTMLElement).querySelector('.brew-sidebar-footer');
+    expect(footer?.textContent).toContain('v0.5.2');
     expect(footer?.textContent).toContain('stable');
   });
 
@@ -81,6 +82,7 @@ describe('SidebarNavComponent', () => {
     fixture.detectChanges();
 
     const footer = (fixture.nativeElement as HTMLElement).querySelector('.brew-sidebar-footer');
+    expect(footer?.textContent).toContain('v0.5.2');
     expect(footer?.textContent).toContain('nightly');
   });
 
