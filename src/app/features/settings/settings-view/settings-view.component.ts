@@ -9,7 +9,11 @@ import { ZardIconComponent } from '@/shared/components/icon';
 import { ZardInputDirective } from '@/shared/components/input';
 import { ZardSegmentedComponent, type SegmentedOption } from '@/shared/components/segmented';
 import { ZardSwitchComponent } from '@/shared/components/switch';
-import type { ActionTemplateStep, AppSettings } from '../../../../shared/contracts';
+import {
+  appReleaseChannelSchema,
+  type ActionTemplateStep,
+  type AppSettings
+} from '../../../../shared/contracts';
 import { ToastService } from '../../../core/services/toast.service';
 import { PackageActionsService } from '../../../core/services/package-actions.service';
 import { TemplatesStore } from '../../../core/stores/templates.store';
@@ -119,8 +123,9 @@ export class SettingsViewComponent {
   }
 
   protected onAppReleaseChannelChange(value: string): void {
-    if (value === 'stable' || value === 'nightly') {
-      this.updateSetting('appReleaseChannel', value);
+    const parsed = appReleaseChannelSchema.safeParse(value);
+    if (parsed.success) {
+      this.updateSetting('appReleaseChannel', parsed.data);
     }
   }
 

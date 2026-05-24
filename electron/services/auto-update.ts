@@ -10,13 +10,13 @@ type UpdateStateEmitter = (state: AppUpdateState) => void;
 
 interface ConfigureAutoUpdateOptions {
   onStateChanged?: UpdateStateEmitter;
-  releaseChannel?: AppReleaseChannel;
 }
 
 let currentState: AppUpdateState = createInitialState();
 let stateEmitter: UpdateStateEmitter | null = null;
 let configured = false;
-let appliedReleaseChannel: AppReleaseChannel | null = null;
+let appliedReleaseChannel: AppReleaseChannel = 'stable';
+let hasAppliedChannel = false;
 
 function createInitialState(): AppUpdateState {
   return {
@@ -47,12 +47,22 @@ export function applyAppReleaseChannel(channel: AppReleaseChannel): void {
     return;
   }
 
-  const allowPrerelease = channel === 'nightly';
-  const previousChannel = appliedReleaseChannel;
-  appliedReleaseChannel = channel;
-  autoUpdater.allowPrerelease = allowPrerelease;
+  if (hasAppliedChannel && appliedReleaseChannel === channel) {
+    return;
+  }
 
-  if (previousChannel !== null && previousChannel !== channel && configured) {
+  const channelChanged = hasAppliedChannel && appliedReleaseChannel !== channel;
+  appliedReleaseChannel = channel;
+  hasAppliedChannel = true;
+  autoUpdater.allowPrerelease = channel === 'nightly';
+
+  if (channelChanged && configured) {
+    setState({
+      status: 'checking',
+      availableVersion: undefined,
+      releaseNotes: undefined,
+      error: undefined
+    });
     void checkForAppUpdate();
   }
 }
@@ -64,6 +74,10 @@ export async function checkForAppUpdate(): Promise<void> {
 
   setState({ status: 'checking', error: undefined });
   await autoUpdater.checkForUpdates();
+}
+
+export function startAutoUpdatePolling(): void {
+  void checkForAppUpdate();
 }
 
 export async function quitAndInstallUpdate(): Promise<void> {
@@ -93,8 +107,6 @@ export function configureAutoUpdate(options: ConfigureAutoUpdateOptions = {}): v
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
-
-  applyAppReleaseChannel(options.releaseChannel ?? 'stable');
 
   autoUpdater.on('error', (error) => {
     log.warn('Auto-updater error', error, { correlationId: 'auto-update' });
@@ -133,6 +145,4 @@ export function configureAutoUpdate(options: ConfigureAutoUpdateOptions = {}): v
       error: undefined
     });
   });
-
-  void checkForAppUpdate();
 }

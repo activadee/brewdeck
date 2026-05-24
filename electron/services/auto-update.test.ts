@@ -37,6 +37,7 @@ describe('auto-update service', () => {
     autoUpdater.on.mockClear();
     autoUpdater.checkForUpdates.mockClear();
     autoUpdater.quitAndInstall.mockClear();
+    autoUpdater.allowPrerelease = false;
     vi.resetModules();
   });
 
@@ -44,11 +45,18 @@ describe('auto-update service', () => {
     return import('./auto-update');
   }
 
+  async function bootstrapAutoUpdate(onStateChanged = vi.fn()) {
+    const module = await loadModule();
+    module.configureAutoUpdate({ onStateChanged });
+    module.applyAppReleaseChannel('stable');
+    module.startAutoUpdatePolling();
+    return module;
+  }
+
   it('maps updater events to state', async () => {
     const onStateChanged = vi.fn();
-    const { configureAutoUpdate, getUpdateState, checkForAppUpdate } = await loadModule();
+    const { getUpdateState, checkForAppUpdate } = await bootstrapAutoUpdate(onStateChanged);
 
-    configureAutoUpdate({ onStateChanged });
     expect(getUpdateState().status).toBe('checking');
 
     updaterListeners.get('update-available')?.({
@@ -84,9 +92,8 @@ describe('auto-update service', () => {
   });
 
   it('quits and installs only when update is ready', async () => {
-    const { configureAutoUpdate, quitAndInstallUpdate, getUpdateState } = await loadModule();
+    const { quitAndInstallUpdate, getUpdateState } = await bootstrapAutoUpdate();
 
-    configureAutoUpdate();
     await quitAndInstallUpdate();
     expect(autoUpdater.quitAndInstall).not.toHaveBeenCalled();
 
@@ -106,20 +113,20 @@ describe('auto-update service', () => {
     expect(autoUpdater.on).toHaveBeenCalledTimes(4);
   });
 
-  it('sets allowPrerelease from release channel on configure', async () => {
-    const { configureAutoUpdate, applyAppReleaseChannel } = await loadModule();
+  it('sets allowPrerelease before initial check when configured for nightly', async () => {
+    const { configureAutoUpdate, applyAppReleaseChannel, startAutoUpdatePolling } = await loadModule();
 
-    configureAutoUpdate({ releaseChannel: 'stable' });
-    expect(autoUpdater.allowPrerelease).toBe(false);
-
+    configureAutoUpdate();
     applyAppReleaseChannel('nightly');
     expect(autoUpdater.allowPrerelease).toBe(true);
+
+    startAutoUpdatePolling();
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalled();
   });
 
   it('re-checks for updates when release channel changes after configure', async () => {
-    const { configureAutoUpdate, applyAppReleaseChannel } = await loadModule();
+    const { applyAppReleaseChannel } = await bootstrapAutoUpdate();
 
-    configureAutoUpdate({ releaseChannel: 'stable' });
     autoUpdater.checkForUpdates.mockClear();
 
     applyAppReleaseChannel('nightly');
@@ -131,6 +138,24 @@ describe('auto-update service', () => {
     expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();
   });
 
+  it('clears pending update state when release channel changes', async () => {
+    const { applyAppReleaseChannel, getUpdateState } = await bootstrapAutoUpdate();
+
+    updaterListeners.get('update-downloaded')?.({ version: '2.0.0', releaseNotes: 'Notes' });
+    expect(getUpdateState()).toMatchObject({
+      status: 'ready',
+      availableVersion: '2.0.0'
+    });
+
+    applyAppReleaseChannel('nightly');
+
+    expect(getUpdateState()).toMatchObject({
+      status: 'checking',
+      availableVersion: undefined,
+      releaseNotes: undefined
+    });
+  });
+
   it('starts disabled when the app is not packaged', async () => {
     vi.doMock('electron', () => ({
       app: {
@@ -138,9 +163,11 @@ describe('auto-update service', () => {
         getVersion: () => '1.0.0'
       }
     }));
-    const { configureAutoUpdate, getUpdateState, isAutoUpdateEnabled } = await loadModule();
+    const { configureAutoUpdate, getUpdateState, isAutoUpdateEnabled, startAutoUpdatePolling } =
+      await loadModule();
 
     configureAutoUpdate();
+    startAutoUpdatePolling();
     expect(isAutoUpdateEnabled()).toBe(false);
     expect(getUpdateState().status).toBe('disabled');
     expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();

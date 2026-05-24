@@ -3,18 +3,14 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_SETTINGS } from '../../../../shared/contracts';
 import { AppUpdateStore } from '../../../core/stores/app-update.store';
-import { SettingsStore } from '../../../core/stores/settings.store';
 import { SidebarNavComponent } from './sidebar-nav.component';
 
 describe('SidebarNavComponent', () => {
-  function configure(
-    updateStore: Record<string, unknown> = {},
-    appReleaseChannel: 'stable' | 'nightly' = 'stable'
-  ) {
+  function configure(updateStore: Record<string, unknown> = {}) {
     const appUpdateStore = {
       currentVersion: signal('0.5.2'),
+      sidebarVersionLabel: signal('v0.5.2 · stable'),
       canRestart: signal(false),
       sidebarFooterLabel: signal(''),
       state: signal<{ status: string } | null>({ status: 'upToDate' }),
@@ -22,16 +18,11 @@ describe('SidebarNavComponent', () => {
       ...updateStore
     };
 
-    const settingsStore = {
-      settings: signal({ ...DEFAULT_SETTINGS, appReleaseChannel })
-    };
-
     return TestBed.configureTestingModule({
       imports: [SidebarNavComponent],
       providers: [
         provideRouter([]),
-        { provide: AppUpdateStore, useValue: appUpdateStore },
-        { provide: SettingsStore, useValue: settingsStore }
+        { provide: AppUpdateStore, useValue: appUpdateStore }
       ]
     });
   }
@@ -65,7 +56,7 @@ describe('SidebarNavComponent', () => {
   });
 
   it('shows version and release channel in the sidebar footer', async () => {
-    await configure({}, 'stable').compileComponents();
+    await configure().compileComponents();
 
     const fixture = TestBed.createComponent(SidebarNavComponent);
     fixture.detectChanges();
@@ -76,7 +67,9 @@ describe('SidebarNavComponent', () => {
   });
 
   it('shows nightly when nightly channel is selected', async () => {
-    await configure({}, 'nightly').compileComponents();
+    await configure({
+      sidebarVersionLabel: signal('v0.5.2 · nightly')
+    }).compileComponents();
 
     const fixture = TestBed.createComponent(SidebarNavComponent);
     fixture.detectChanges();
