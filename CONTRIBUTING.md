@@ -2,51 +2,69 @@
 
 ## Branching
 
-All work targets **`main`** (default branch).
+All work targets **`main`**.
 
 ```text
 feature/* --[PR]--> main
 ```
 
-Use squash or merge commits as your team prefers; CI runs on every pull request to `main`.
+CI runs on every pull request to `main`.
 
 ## Releases
 
-Do **not** push version tags manually for normal pre-releases.
+Release automation uses **tag-driven** stable releases, **scheduled / manual beta** pre-releases, preflight checks, `softprops/action-gh-release`, and a finalize step that bumps `package.json` on `main` (via a GitHub App).
 
-| Action | Result |
-|--------|--------|
-| Merge PR into `main` | Next `vX.Y.Z-beta.N` **pre-release** (unsigned macOS DMG/ZIP + `latest-mac.yml`) |
-| **Release** workflow → `stable` (manual) | Stable `vX.Y.Z` marked **Latest** on GitHub |
+Merges to `main` do **not** auto-tag or auto-release.
 
-### Pre-releases (automatic)
+### Beta pre-releases
 
-After each push to `main` (except `chore(release):` bot commits), **Bump and Tag** creates the next beta tag and runs the **Release** workflow.
+| Trigger | Behavior |
+|---------|----------|
+| **Schedule** (every 6h) | If `main` changed since the last `v*-beta.*` tag → next beta pre-release |
+| **Actions → Release → `beta`** | Beta pre-release from current `main` |
 
-### Stable release (manual)
+Beta tags look like `v0.6.0-beta.1`, `v0.6.0-beta.2`, … (see `scripts/resolve-prerelease.ts`).
 
-When you are ready to ship to users (and auto-update):
+### Stable releases
 
-1. Open **Actions** → **Release** → **Run workflow**.
-2. Set **Release type** to `stable`.
-3. Optionally set **Stable version** (e.g. `0.6.1`). If omitted, the version is taken from `package.json` on `main` (prerelease suffix is stripped).
-4. Run on `main`.
+| Trigger | Behavior |
+|---------|----------|
+| **Push tag** `vX.Y.Z` (no `-beta`) | Stable release, marked **Latest** |
+| **Actions → Release → `stable`** | Requires **version** input (e.g. `0.6.1` or `v0.6.1`); creates the GitHub Release at current `main` |
 
-The workflow tags `main`, builds, and publishes a non-prerelease GitHub Release.
+You can tag locally and push:
 
-`package.json` on `main` is aligned only for the build (at the release tag). It is **not** committed back to `main` automatically, because branch protection (PR + required checks) blocks direct bot pushes. Update `package.json` in a normal PR if you want it to match the shipped version, or allow `github-actions[bot]` to bypass rules for release commits in [repository rules](https://github.com/activadee/brewdeck/rules).
+```bash
+git tag v0.6.1
+git push origin v0.6.1
+```
+
+Or use workflow dispatch with channel `stable` and a version (no tag push required; the release action creates the tag).
 
 ### Unsigned build only
 
-**Release** workflow → **Release type** `build-only` uploads artifacts to the workflow run without creating a GitHub Release.
+**Release** workflow → channel **`build-only`** → test + macOS build; artifacts on the workflow run only.
+
+### Finalize (stable only)
+
+After a **stable** release, the workflow commits `chore(release): prepare vX.Y.Z` to `main` using a **GitHub App**.
+
+Repository secrets (required for finalize with branch protection):
+
+- `RELEASE_APP_ID`
+- `RELEASE_APP_PRIVATE_KEY`
+
+Create a GitHub App with contents write access, install it on this repo, and allow it to bypass branch rules for release commits if needed.
+
+Publishing uses the app token when configured; otherwise `GITHUB_TOKEN` is used (may be enough without branch protection on finalize).
 
 ## Auto-update
 
-Packaged apps only pick up **stable** releases (`vX.Y.Z` without `-beta`). Pre-releases are for manual testing.
+Shipped apps only auto-update from **stable** releases (`vX.Y.Z` without `-beta`).
 
 ## Local development
 
-See [README.md](README.md) for install, `npm run dev`, and tests.
+See [README.md](README.md).
 
 ## CI
 

@@ -1,162 +1,147 @@
 name: Release
 
 concurrency:
-  group: release-${{ github.event.inputs.ref_tag || github.event.inputs.release_type || github.ref_name }}
+  group: release-${{ github.event.inputs.channel || github.ref_name }}
   cancel-in-progress: false
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*'
+      - '!v*-beta.*'
+  schedule:
+    - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
-      release_type:
-        description: 'Release type'
-        required: true
-        default: build-only
+      channel:
+        description: Release channel
+        required: false
+        default: stable
         type: choice
         options:
-          - build-only
           - stable
+          - beta
+          - build-only
       version:
-        description: 'Stable version X.Y.Z (optional; defaults from package.json on main)'
-        required: false
-        type: string
-      ref_tag:
-        description: 'Internal: tag to build (set by Bump and Tag)'
+        description: Release version (for example 1.2.3 or v1.2.3); required for stable
         required: false
         type: string
 
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 jobs:
-  prepare_stable:
-    name: Tag stable release
-    if: github.event_name == 'workflow_dispatch' && inputs.release_type == 'stable'
+  check_changes:
+    name: Check for changes since last beta
+    if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     outputs:
-      tag: ${{ steps.meta.outputs.tag }}
-      version: ${{ steps.meta.outputs.version }}
-      sha: ${{ steps.resolve_sha.outputs.sha }}
+      has_changes: ${{ steps.check.outputs.has_changes }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Resolve stable version
-        id: meta
-        env:
-          INPUT_VERSION: ${{ inputs.version }}
+      - id: check
+        name: Compare HEAD to last beta tag
         run: |
-          if [[ -n "$INPUT_VERSION" ]]; then
-            version="${INPUT_VERSION#v}"
-            if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "Invalid stable version: $INPUT_VERSION" >&2
-              exit 1
-            fi
-            echo "version=$version" >> "$GITHUB_OUTPUT"
-            echo "tag=v$version" >> "$GITHUB_OUTPUT"
-          else
-            npx tsx scripts/resolve-stable-release.ts --github-output
-          fi
-
-      - id: resolve_sha
-        name: Resolve commit SHA
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: Create and push stable tag
-        env:
-          TAG: ${{ steps.meta.outputs.tag }}
-        run: |
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists; reusing it for this release run."
+          last_beta_tag=$(git tag --list 'v*-beta.*' --sort=-creatordate | head -n 1)
+          if [[ -z "$last_beta_tag" ]]; then
+            echo "No previous beta tag found. Proceeding with release."
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag "$TAG" HEAD
-          git push origin "$TAG"
+
+          last_beta_sha=$(git rev-parse "$last_beta_tag^{commit}")
+          head_sha=$(git rev-parse HEAD)
+
+          if [[ "$last_beta_sha" == "$head_sha" ]]; then
+            echo "No changes on main since last beta release ($last_beta_tag). Skipping."
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Changes detected on main since $last_beta_tag ($last_beta_sha → $head_sha). Proceeding."
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
 
   preflight:
     name: Preflight
-    needs: [prepare_stable]
+    needs: [check_changes]
     if: |
-      always() &&
-      needs.prepare_stable.result != 'failure' &&
-      (
-        startsWith(github.ref, 'refs/tags/') ||
-        inputs.ref_tag != '' ||
-        needs.prepare_stable.result == 'success'
-      )
+      !failure() && !cancelled() &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.channel != 'build-only') &&
+      (github.event_name != 'schedule' || needs.check_changes.outputs.has_changes == 'true')
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 30
     outputs:
+      release_channel: ${{ steps.release_meta.outputs.release_channel }}
       version: ${{ steps.release_meta.outputs.version }}
       tag: ${{ steps.release_meta.outputs.tag }}
       release_name: ${{ steps.release_meta.outputs.name }}
-      release_channel: ${{ steps.release_meta.outputs.release_channel }}
       is_prerelease: ${{ steps.release_meta.outputs.is_prerelease }}
       make_latest: ${{ steps.release_meta.outputs.make_latest }}
       previous_tag: ${{ steps.previous_tag.outputs.previous_tag }}
-      ref: ${{ steps.resolve_ref.outputs.sha }}
+      ref: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ startsWith(github.ref, 'refs/tags/') && github.ref || 'main' }}
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
 
-      - id: resolve_ref
-        name: Resolve release ref
-        shell: bash
-        run: |
-          if [[ -n "${{ inputs.ref_tag }}" ]]; then
-            tag="${{ inputs.ref_tag }}"
-            sha="$(git rev-list -n 1 "$tag")"
-          elif [[ "${{ needs.prepare_stable.result }}" == "success" ]]; then
-            tag="${{ needs.prepare_stable.outputs.tag }}"
-            sha="${{ needs.prepare_stable.outputs.sha }}"
-          else
-            tag="${GITHUB_REF_NAME}"
-            sha="${GITHUB_SHA}"
-          fi
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Enable package manager from package.json
+        run: corepack enable
+
+      - name: Install dependencies
+        run: npm ci
 
       - id: release_meta
-        name: Resolve release metadata
+        name: Resolve release version
         shell: bash
+        env:
+          DISPATCH_CHANNEL: ${{ github.event.inputs.channel }}
+          DISPATCH_VERSION: ${{ github.event.inputs.version }}
         run: |
-          raw="${{ steps.resolve_ref.outputs.tag }}"
-          version="${raw#v}"
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid release version: $raw" >&2
-            exit 1
-          fi
-
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=$raw" >> "$GITHUB_OUTPUT"
-          echo "name=Brewdeck v$version" >> "$GITHUB_OUTPUT"
-
-          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "release_channel=stable" >> "$GITHUB_OUTPUT"
-            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
-            echo "make_latest=true" >> "$GITHUB_OUTPUT"
-          else
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" || ( "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "${DISPATCH_CHANNEL:-stable}" == "beta" ) ]]; then
+            npx tsx scripts/resolve-prerelease.ts --github-output
             echo "release_channel=beta" >> "$GITHUB_OUTPUT"
             echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
             echo "make_latest=false" >> "$GITHUB_OUTPUT"
+          else
+            if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+              raw="${DISPATCH_VERSION}"
+              if [[ -z "$raw" ]]; then
+                echo "workflow_dispatch stable releases require the version input." >&2
+                exit 1
+              fi
+            else
+              raw="${GITHUB_REF_NAME}"
+            fi
+
+            version="${raw#v}"
+            if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+              echo "Invalid release version: $raw" >&2
+              exit 1
+            fi
+
+            echo "release_channel=stable" >> "$GITHUB_OUTPUT"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "tag=v$version" >> "$GITHUB_OUTPUT"
+            echo "name=Brewdeck v$version" >> "$GITHUB_OUTPUT"
+            if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+              echo "make_latest=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+              echo "make_latest=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
+
+      - name: Test
+        run: npm run test:all
 
       - id: previous_tag
         name: Resolve previous release tag
@@ -168,11 +153,11 @@ jobs:
 
   build:
     name: Build macOS
-    needs: [prepare_stable, preflight]
+    needs: preflight
     if: |
-      always() &&
-      needs.prepare_stable.result != 'failure' &&
-      needs.preflight.result == 'success'
+      !failure() && !cancelled() &&
+      needs.preflight.result == 'success' &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.channel != 'build-only')
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
@@ -194,6 +179,49 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build macOS artifacts (unsigned)
+        run: npm run package:mac:ci
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Collect release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-publish
+          shopt -s nullglob
+          for file in release/*.dmg release/*.zip release/*.yml; do
+            cp "$file" release-publish/
+          done
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos
+          path: release-publish/*
+          if-no-files-found: error
+
+  build_only:
+    name: Build macOS (no publish)
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.channel == 'build-only'
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Enable package manager from package.json
+        run: corepack enable
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Test
         run: npm run test:all
 
@@ -202,35 +230,63 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Upload release artifacts
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: brewdeck-macos-${{ needs.preflight.outputs.tag }}
+          name: brewdeck-macos-${{ github.run_number }}
           path: |
             release/*.dmg
             release/*.zip
             release/*.yml
           retention-days: 14
 
-  publish:
+  release:
     name: Publish GitHub Release
-    needs: [prepare_stable, preflight, build]
+    needs: [preflight, build]
     if: |
-      always() &&
-      needs.prepare_stable.result != 'failure' &&
+      !failure() && !cancelled() &&
       needs.preflight.result == 'success' &&
       needs.build.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
-      - name: Download release artifacts
+      - id: app_token
+        name: Mint release app token
+        continue-on-error: true
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Download desktop artifacts
         uses: actions/download-artifact@v4
         with:
-          name: brewdeck-macos-${{ needs.preflight.outputs.tag }}
+          name: desktop-macos
           path: release-assets
 
       - name: Publish release
-        if: needs.preflight.outputs.previous_tag != ''
+        if: needs.preflight.outputs.previous_tag != '' && steps.app_token.outputs.token != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.preflight.outputs.tag }}
+          target_commitish: ${{ needs.preflight.outputs.ref }}
+          name: ${{ needs.preflight.outputs.release_name }}
+          generate_release_notes: true
+          previous_tag: ${{ needs.preflight.outputs.previous_tag }}
+          prerelease: ${{ needs.preflight.outputs.is_prerelease == 'true' }}
+          make_latest: ${{ needs.preflight.outputs.make_latest == 'true' }}
+          files: |
+            release-assets/*.dmg
+            release-assets/*.zip
+            release-assets/*.yml
+          fail_on_unmatched_files: true
+          token: ${{ steps.app_token.outputs.token }}
+
+      - name: Publish release (GITHUB_TOKEN)
+        if: needs.preflight.outputs.previous_tag != '' && steps.app_token.outputs.token == ''
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.preflight.outputs.tag }}
@@ -247,7 +303,24 @@ jobs:
           fail_on_unmatched_files: true
 
       - name: Publish first release
-        if: needs.preflight.outputs.previous_tag == ''
+        if: needs.preflight.outputs.previous_tag == '' && steps.app_token.outputs.token != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.preflight.outputs.tag }}
+          target_commitish: ${{ needs.preflight.outputs.ref }}
+          name: ${{ needs.preflight.outputs.release_name }}
+          generate_release_notes: true
+          prerelease: ${{ needs.preflight.outputs.is_prerelease == 'true' }}
+          make_latest: ${{ needs.preflight.outputs.make_latest == 'true' }}
+          files: |
+            release-assets/*.dmg
+            release-assets/*.zip
+            release-assets/*.yml
+          fail_on_unmatched_files: true
+          token: ${{ steps.app_token.outputs.token }}
+
+      - name: Publish first release (GITHUB_TOKEN)
+        if: needs.preflight.outputs.previous_tag == '' && steps.app_token.outputs.token == ''
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.preflight.outputs.tag }}
@@ -262,43 +335,62 @@ jobs:
             release-assets/*.yml
           fail_on_unmatched_files: true
 
-  # Human "build-only" only — Bump and Tag also dispatches with release_type=build-only but sets ref_tag.
-  manual-build:
-    name: Manual unsigned build
+  finalize:
+    name: Finalize release
+    needs: [preflight, release]
     if: |
-      github.event_name == 'workflow_dispatch' &&
-      inputs.release_type == 'build-only' &&
-      inputs.ref_tag == ''
-    runs-on: macos-latest
-    timeout-minutes: 45
+      !failure() && !cancelled() &&
+      needs.preflight.result == 'success' &&
+      needs.release.result == 'success' &&
+      needs.preflight.outputs.release_channel == 'stable' &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.channel != 'build-only')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
+      - id: app_token
+        name: Mint release app token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ steps.app_token.outputs.token }}
+          persist-credentials: true
+
+      - id: app_bot
+        name: Resolve GitHub App bot identity
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          APP_SLUG: ${{ steps.app_token.outputs.app-slug }}
+        run: |
+          user_id="$(gh api "/users/${APP_SLUG}[bot]" --jq .id)"
+          echo "name=${APP_SLUG}[bot]" >> "$GITHUB_OUTPUT"
+          echo "email=${user_id}+${APP_SLUG}[bot]@users.noreply.github.com" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
 
-      - name: Enable package manager from package.json
-        run: corepack enable
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Test
-        run: npm run test:all
-
-      - name: Build macOS artifacts (unsigned, no publish)
-        run: npm run package:mac:ci
+      - id: update_versions
+        name: Update package version
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+          RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
+        run: npx tsx scripts/update-release-package-version.ts "$RELEASE_VERSION" --github-output
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: brewdeck-macos-${{ github.run_number }}
-          path: |
-            release/*.dmg
-            release/*.zip
-            release/*.yml
-          retention-days: 14
+      - name: Commit and push version bump
+        if: steps.update_versions.outputs.changed == 'true'
+        env:
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+        run: |
+          git config user.name "${{ steps.app_bot.outputs.name }}"
+          git config user.email "${{ steps.app_bot.outputs.email }}"
+          git add package.json
+          git commit -m "chore(release): prepare $RELEASE_TAG"
+          git push origin HEAD:main

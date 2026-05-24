@@ -54,14 +54,14 @@ Outputs are generated in `release/`.
 
 ## GitHub Release (unsigned)
 
-Releases are driven from **`main`** — see [CONTRIBUTING.md](CONTRIBUTING.md).
+Releases are automated from `main` — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 | Trigger | Release |
 |---------|---------|
-| Merge PR into `main` | Pre-release `vX.Y.Z-beta.N` (unsigned DMG + ZIP + `latest-mac.yml`) |
-| **Release** workflow → `stable` (manual) | Stable `vX.Y.Z` marked **Latest** |
+| Schedule or **Release** → `beta` | Pre-release `vX.Y.Z-beta.N` |
+| Push tag `vX.Y.Z` or **Release** → `stable` | Stable **Latest** (unsigned DMG + ZIP + `latest-mac.yml`) |
 
-Do not push beta tags manually. Use the **Release** workflow with `build-only` for an unsigned build without publishing to GitHub Releases.
+Merges to `main` alone do not publish. Use **Release** → `build-only` for a local CI build without a GitHub Release.
 
 The CI job sets `CSC_IDENTITY_AUTO_DISCOVERY=false`, so builds are **unsigned**. macOS Gatekeeper may block first launch (and sometimes updated installs) until the user uses **Right-click → Open** or allows the app in **System Settings → Privacy & Security**.
 
