@@ -13,5 +13,8 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   dts: false,
-  external: ['electron']
+  external: ['electron'],
+  define: {
+    __ENABLE_AUTO_UPDATES__: JSON.stringify(process.env.ENABLE_AUTO_UPDATES === '1')
+  }
 });

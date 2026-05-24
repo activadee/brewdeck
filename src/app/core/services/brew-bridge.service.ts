@@ -1,10 +1,13 @@
 import { Injectable } from '@angular/core';
 
+import packageJson from '../../../../package.json';
+
 import {
   DEFAULT_WINDOW_CHROME_STATE,
   DEFAULT_SETTINGS,
   type AppSettings,
   type AppSettingsUpdate,
+  type AppUpdateState,
   type BrewGuiBridge,
   type BrewDoctorResult,
   type BrewJobAction,
@@ -66,6 +69,18 @@ const createFallbackBridge = (): BrewGuiBridge => ({
   },
   async getWindowChromeState(): Promise<WindowChromeState> {
     return DEFAULT_WINDOW_CHROME_STATE;
+  },
+  async getAppVersion(): Promise<string> {
+    return packageJson.version;
+  },
+  async getUpdateState(): Promise<AppUpdateState> {
+    return {
+      status: 'disabled',
+      currentVersion: packageJson.version
+    };
+  },
+  async checkForAppUpdate(): Promise<void> {
+    return undefined;
   },
   async quitAndInstallUpdate(): Promise<void> {
     return undefined;
@@ -373,6 +388,9 @@ const createFallbackBridge = (): BrewGuiBridge => ({
     return () => undefined;
   },
   onUpdateAvailable() {
+    return () => undefined;
+  },
+  onUpdateStateChanged() {
     return () => undefined;
   }
 });

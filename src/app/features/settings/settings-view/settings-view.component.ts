@@ -11,6 +11,7 @@ import { ZardSwitchComponent } from '@/shared/components/switch';
 import type { ActionTemplateStep } from '../../../../shared/contracts';
 import { PackageActionsService } from '../../../core/services/package-actions.service';
 import { TemplatesStore } from '../../../core/stores/templates.store';
+import { AppUpdateStore } from '../../../core/stores/app-update.store';
 import { SettingsStore } from '../../../core/stores/settings.store';
 
 const STEP_OPTIONS: ActionTemplateStep['action'][] = ['install', 'pin', 'unpin', 'upgradeOne'];
@@ -33,6 +34,7 @@ const STEP_OPTIONS: ActionTemplateStep['action'][] = ['install', 'pin', 'unpin',
 })
 export class SettingsViewComponent {
   protected readonly settingsStore = inject(SettingsStore);
+  protected readonly appUpdateStore = inject(AppUpdateStore);
   protected readonly templatesStore = inject(TemplatesStore);
   private readonly packageActions = inject(PackageActionsService);
 
@@ -71,6 +73,7 @@ export class SettingsViewComponent {
   });
 
   constructor() {
+    void this.appUpdateStore.initialize();
     void this.templatesStore.load();
     effect(() => {
       const settings = this.settingsStore.settings();

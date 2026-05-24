@@ -36,6 +36,7 @@ import { BrewFacadeService } from '../../core/services/brew-facade.service';
 import { PackageActionsService } from '../../core/services/package-actions.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AppStatusStore } from '../../core/stores/app-status.store';
+import { AppUpdateStore } from '../../core/stores/app-update.store';
 import { CatalogStore } from '../../core/stores/catalog.store';
 import { InstalledStore } from '../../core/stores/installed.store';
 import { JobsStore } from '../../core/stores/jobs.store';
@@ -93,6 +94,7 @@ type PendingPackageAction =
 })
 export class AppShellComponent {
   protected readonly appStatusStore = inject(AppStatusStore);
+  private readonly appUpdateStore = inject(AppUpdateStore);
   protected readonly catalogStore = inject(CatalogStore);
   protected readonly installedStore = inject(InstalledStore);
   protected readonly jobsStore = inject(JobsStore);
@@ -512,7 +514,7 @@ export class AppShellComponent {
   private async initialize(): Promise<void> {
     try {
       await this.settingsStore.load();
-      await this.appStatusStore.initialize();
+      await Promise.all([this.appStatusStore.initialize(), this.appUpdateStore.initialize()]);
       void this.templatesStore.load();
 
       // Informational only: recovery does not re-run brew commands.

@@ -150,6 +150,47 @@
             />
           </div>
 
+          <z-divider zSpacing="sm" />
+
+          <div class="space-y-2">
+            <div class="flex items-center gap-2">
+              <p class="text-sm font-medium">About Brewdeck</p>
+              @if (appUpdateStore.showUpdateBadge()) {
+                <z-badge zType="default" zShape="pill">Update available</z-badge>
+              }
+            </div>
+            <p class="text-sm">Brewdeck {{ appUpdateStore.currentVersion() }}</p>
+            @if (appUpdateStore.hintText()) {
+              <p
+                class="text-xs"
+                [class.text-muted-foreground]="!appUpdateStore.hintAccent()"
+                [class.text-primary]="appUpdateStore.hintAccent()"
+                [class.text-destructive]="appUpdateStore.state()?.status === 'error'"
+              >
+                {{ appUpdateStore.hintText() }}
+              </p>
+            }
+            <div class="flex flex-wrap items-center gap-2">
+              @if (appUpdateStore.canCheck()) {
+                <button
+                  type="button"
+                  z-button
+                  zType="outline"
+                  zSize="sm"
+                  [zDisabled]="appUpdateStore.checking()"
+                  (click)="appUpdateStore.checkForUpdates()"
+                >
+                  {{ appUpdateStore.checking() ? 'Checking…' : 'Check for updates' }}
+                </button>
+              }
+              @if (appUpdateStore.canRestart()) {
+                <button type="button" z-button zSize="sm" (click)="appUpdateStore.quitAndInstall()">
+                  Restart to update
+                </button>
+              }
+            </div>
+          </div>
+
           <div class="flex items-center justify-end gap-2 pt-1">
             <button type="button" z-button zType="outline" zSize="sm" [zDisabled]="settingsStore.saving()" (click)="resetForm()">
               Reset

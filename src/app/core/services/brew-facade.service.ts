@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import type {
   ActionTemplate,
   AppUpdateAvailableEvent,
+  AppUpdateState,
   AppSettings,
   AppSettingsUpdate,
   BatchJobResult,
@@ -66,6 +67,18 @@ export class BrewFacadeService {
 
   getWindowChromeState(): Promise<WindowChromeState> {
     return this.bridge.api.getWindowChromeState();
+  }
+
+  getAppVersion(): Promise<string> {
+    return this.bridge.api.getAppVersion();
+  }
+
+  getUpdateState(): Promise<AppUpdateState> {
+    return this.bridge.api.getUpdateState();
+  }
+
+  checkForAppUpdate(): Promise<void> {
+    return this.bridge.api.checkForAppUpdate();
   }
 
   getAvailability(): Promise<BrewAvailability> {
@@ -246,6 +259,10 @@ export class BrewFacadeService {
 
   onUpdateAvailable(handler: (event: AppUpdateAvailableEvent) => void): () => void {
     return this.bridge.api.onUpdateAvailable(handler);
+  }
+
+  onUpdateStateChanged(handler: (state: AppUpdateState) => void): () => void {
+    return this.bridge.api.onUpdateStateChanged(handler);
   }
 
   quitAndInstallUpdate(): Promise<void> {

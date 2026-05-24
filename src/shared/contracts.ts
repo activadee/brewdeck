@@ -712,10 +712,22 @@ export const appUpdateAvailableEventSchema = z.object({
 });
 export type AppUpdateAvailableEvent = z.infer<typeof appUpdateAvailableEventSchema>;
 
+export const appUpdateStateSchema = z.object({
+  status: z.enum(['disabled', 'idle', 'checking', 'downloading', 'ready', 'upToDate', 'error']),
+  currentVersion: z.string(),
+  availableVersion: z.string().optional(),
+  releaseNotes: z.string().nullable().optional(),
+  error: z.string().optional()
+});
+export type AppUpdateState = z.infer<typeof appUpdateStateSchema>;
+
 export interface BrewGuiBridge {
   openMainWindow(): Promise<void>;
   windowControl(action: WindowControlAction): Promise<void>;
   getWindowChromeState(): Promise<WindowChromeState>;
+  getAppVersion(): Promise<string>;
+  getUpdateState(): Promise<AppUpdateState>;
+  checkForAppUpdate(): Promise<void>;
   quitAndInstallUpdate(): Promise<void>;
   getBrewAvailability(): Promise<BrewAvailability>;
   getInstalled(): Promise<InstalledPackage[]>;
@@ -762,6 +774,7 @@ export interface BrewGuiBridge {
   onJobComplete(handler: (event: BrewJobCompleteEvent) => void): () => void;
   onJobFailed(handler: (event: BrewJobFailedEvent) => void): () => void;
   onUpdateAvailable(handler: (event: AppUpdateAvailableEvent) => void): () => void;
+  onUpdateStateChanged(handler: (state: AppUpdateState) => void): () => void;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
