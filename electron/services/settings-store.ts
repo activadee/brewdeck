@@ -21,7 +21,7 @@ export class SettingsStore {
 
   constructor() {
     this.store = new Store<PersistedState>({
-      name: 'brew-gui-settings',
+      name: 'brewdeck-settings',
       defaults: {
         settings: DEFAULT_SETTINGS,
         lastUpdateCount: 0,

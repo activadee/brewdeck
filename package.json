@@ -1,5 +1,5 @@
 {
-  "name": "brew-gui",
+  "name": "brewdeck",
   "version": "0.5.2",
   "description": "Minimalistic Homebrew menu bar desktop app",
   "private": true,
@@ -86,7 +86,7 @@
       "output": "release"
     },
     "files": [
-      "dist/brew-gui/browser/**/*",
+      "dist/brewdeck/browser/**/*",
       "dist-electron/**/*",
       "public/icons/**/*",
       "package.json"
@@ -103,7 +103,7 @@
       {
         "provider": "github",
         "owner": "activadee",
-        "repo": "brew-gui"
+        "repo": "brewdeck"
       }
     ],
     "extraMetadata": {

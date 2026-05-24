@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "brew-gui": {
+    "brewdeck": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -57,10 +57,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "brew-gui:build:production"
+              "buildTarget": "brewdeck:build:production"
             },
             "development": {
-              "buildTarget": "brew-gui:build:development"
+              "buildTarget": "brewdeck:build:development"
             }
           },
           "defaultConfiguration": "development"

@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { app } from 'electron';
 
-const namespace = '[brew-gui]';
+const namespace = '[brewdeck]';
 
 interface LogDetails {
   correlationId?: string;
@@ -19,9 +19,9 @@ function resolveLogFilePath(): string {
 
   let logsDir: string;
   try {
-    logsDir = path.join(app.getPath('logs'), 'brew-gui');
+    logsDir = path.join(app.getPath('logs'), 'brewdeck');
   } catch {
-    return '/tmp/brew-gui/main.log';
+    return '/tmp/brewdeck/main.log';
   }
   mkdirSync(logsDir, { recursive: true });
   logFilePath = path.join(logsDir, 'main.log');

@@ -715,7 +715,7 @@ export const appUpdateStateSchema = z.object({
 });
 export type AppUpdateState = z.infer<typeof appUpdateStateSchema>;
 
-export interface BrewGuiBridge {
+export interface BrewdeckBridge {
   openMainWindow(): Promise<void>;
   windowControl(action: WindowControlAction): Promise<void>;
   getWindowChromeState(): Promise<WindowChromeState>;

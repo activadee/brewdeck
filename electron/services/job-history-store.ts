@@ -26,7 +26,7 @@ export class JobHistoryStore {
 
   constructor() {
     this.store = new Store<PersistedHistory>({
-      name: 'brew-gui-job-history',
+      name: 'brewdeck-job-history',
       defaults: { records: [] }
     });
   }

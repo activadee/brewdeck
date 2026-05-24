@@ -5,11 +5,11 @@ import { DEFAULT_WINDOW_CHROME_STATE } from '../../../shared/contracts';
 import { BrewBridgeService } from './brew-bridge.service';
 
 describe('BrewBridgeService fallback bridge', () => {
-  it('uses fallback bridge when window.brewGui is unavailable', async () => {
-    const originalBridge = window.brewGui;
+  it('uses fallback bridge when window.brewdeck is unavailable', async () => {
+    const originalBridge = window.brewdeck;
 
     try {
-      window.brewGui = undefined;
+      window.brewdeck = undefined;
 
       TestBed.configureTestingModule({
         providers: [BrewBridgeService]
@@ -57,7 +57,7 @@ describe('BrewBridgeService fallback bridge', () => {
         action: 'cleanup'
       });
     } finally {
-      window.brewGui = originalBridge;
+      window.brewdeck = originalBridge;
     }
   });
 });

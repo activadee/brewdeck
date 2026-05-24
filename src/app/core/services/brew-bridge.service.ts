@@ -8,7 +8,7 @@ import {
   type AppSettings,
   type AppSettingsUpdate,
   type AppUpdateState,
-  type BrewGuiBridge,
+  type BrewdeckBridge,
   type BrewDoctorResult,
   type BrewJobAction,
   type BrewJobCompleteEvent,
@@ -60,7 +60,7 @@ function createFallbackJobCompleteEvent(options: {
   };
 }
 
-const createFallbackBridge = (): BrewGuiBridge => ({
+const createFallbackBridge = (): BrewdeckBridge => ({
   async openMainWindow() {
     return undefined;
   },
@@ -391,12 +391,12 @@ const createFallbackBridge = (): BrewGuiBridge => ({
 
 @Injectable({ providedIn: 'root' })
 export class BrewBridgeService {
-  readonly isElectron = typeof window !== 'undefined' && Boolean(window.brewGui);
+  readonly isElectron = typeof window !== 'undefined' && Boolean(window.brewdeck);
 
-  private readonly bridge: BrewGuiBridge =
-    typeof window !== 'undefined' && window.brewGui ? window.brewGui : createFallbackBridge();
+  private readonly bridge: BrewdeckBridge =
+    typeof window !== 'undefined' && window.brewdeck ? window.brewdeck : createFallbackBridge();
 
-  get api(): BrewGuiBridge {
+  get api(): BrewdeckBridge {
     return this.bridge;
   }
 }

@@ -19,7 +19,7 @@ export class TelemetryStore {
 
   constructor() {
     this.store = new Store<PersistedTelemetry>({
-      name: 'brew-gui-telemetry',
+      name: 'brewdeck-telemetry',
       defaults: {
         aggregate: {
           actionCounts: {},

@@ -24,7 +24,7 @@ export class ActiveJobsStore {
 
   constructor() {
     this.store = new Store<PersistedActiveJobs>({
-      name: 'brew-gui-active-jobs',
+      name: 'brewdeck-active-jobs',
       defaults: { jobs: [] }
     });
   }

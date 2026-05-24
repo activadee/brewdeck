@@ -43,8 +43,8 @@ function runGit(args: string[], cwd: string): string {
 }
 
 function configureGitAuthor(cwd: string): void {
-  runGit(['config', 'user.email', 'brew-gui-tests@example.com'], cwd);
-  runGit(['config', 'user.name', 'Brew GUI Tests'], cwd);
+  runGit(['config', 'user.email', 'brewdeck-tests@example.com'], cwd);
+  runGit(['config', 'user.name', 'Brewdeck Tests'], cwd);
 }
 
 function commitFile(cwd: string, fileName: string, contents: string, message: string): void {
@@ -424,7 +424,7 @@ describe('HomebrewService.getPackageDetails', () => {
 
 describe('HomebrewService.getTaps', () => {
   it('treats protected taps without local clones as healthy in API mode', async () => {
-    const missingPath = path.join(os.tmpdir(), `brew-gui-missing-${Date.now()}`);
+    const missingPath = path.join(os.tmpdir(), `brewdeck-missing-${Date.now()}`);
 
     const service = new HomebrewService() as any;
     service.runner = {
@@ -459,7 +459,7 @@ describe('HomebrewService.getTaps', () => {
   });
 
   it('maps local git status into tap sync and health states', async () => {
-    const sandbox = mkdtempSync(path.join(os.tmpdir(), 'brew-gui-taps-'));
+    const sandbox = mkdtempSync(path.join(os.tmpdir(), 'brewdeck-taps-'));
 
     try {
       const remote = path.join(sandbox, 'remote.git');

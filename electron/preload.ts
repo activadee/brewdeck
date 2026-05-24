@@ -47,11 +47,11 @@ import {
   windowChromeChangedEventSchema,
   windowChromeStateSchema,
   windowControlActionSchema,
-  type BrewGuiBridge
+  type BrewdeckBridge
 } from '../src/shared/contracts';
 import { IPC_CHANNELS } from './ipc-channels';
 
-const api: BrewGuiBridge = {
+const api: BrewdeckBridge = {
   async openMainWindow() {
     await ipcRenderer.invoke(IPC_CHANNELS.APP_OPEN_MAIN);
   },
@@ -351,4 +351,4 @@ const api: BrewGuiBridge = {
   }
 };
 
-contextBridge.exposeInMainWorld('brewGui', api);
+contextBridge.exposeInMainWorld('brewdeck', api);
