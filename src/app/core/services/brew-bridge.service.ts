@@ -70,9 +70,6 @@ const createFallbackBridge = (): BrewGuiBridge => ({
   async getWindowChromeState(): Promise<WindowChromeState> {
     return DEFAULT_WINDOW_CHROME_STATE;
   },
-  async getAppVersion(): Promise<string> {
-    return packageJson.version;
-  },
   async getUpdateState(): Promise<AppUpdateState> {
     return {
       status: 'disabled',
@@ -385,9 +382,6 @@ const createFallbackBridge = (): BrewGuiBridge => ({
     return () => undefined;
   },
   onJobFailed(_handler: (event: BrewJobFailedEvent) => void) {
-    return () => undefined;
-  },
-  onUpdateAvailable() {
     return () => undefined;
   },
   onUpdateStateChanged() {

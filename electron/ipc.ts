@@ -42,12 +42,7 @@ import {
   type WindowChromeState
 } from '../src/shared/contracts';
 import { IPC_CHANNELS } from './ipc-channels';
-import {
-  checkForAppUpdate,
-  getAppVersion,
-  getUpdateState,
-  quitAndInstallUpdate
-} from './services/auto-update';
+import { checkForAppUpdate, getUpdateState, quitAndInstallUpdate } from './services/auto-update';
 import { ActionTemplateRunner } from './services/action-template-runner';
 import { ActionTemplatesStore } from './services/action-templates-store';
 import { ActiveJobsStore } from './services/active-jobs-store';
@@ -122,7 +117,6 @@ export function registerIpcHandlers(options: RegisterIpcOptions): void {
   ipcMain.handle(IPC_CHANNELS.APP_GET_WINDOW_CHROME, () =>
     windowChromeStateSchema.parse(getWindowChromeState())
   );
-  ipcMain.handle(IPC_CHANNELS.APP_GET_VERSION, () => getAppVersion());
   ipcMain.handle(IPC_CHANNELS.APP_GET_UPDATE_STATE, () =>
     appUpdateStateSchema.parse(getUpdateState())
   );

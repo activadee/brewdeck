@@ -2,7 +2,6 @@ import { Injectable, inject } from '@angular/core';
 
 import type {
   ActionTemplate,
-  AppUpdateAvailableEvent,
   AppUpdateState,
   AppSettings,
   AppSettingsUpdate,
@@ -67,10 +66,6 @@ export class BrewFacadeService {
 
   getWindowChromeState(): Promise<WindowChromeState> {
     return this.bridge.api.getWindowChromeState();
-  }
-
-  getAppVersion(): Promise<string> {
-    return this.bridge.api.getAppVersion();
   }
 
   getUpdateState(): Promise<AppUpdateState> {
@@ -255,10 +250,6 @@ export class BrewFacadeService {
 
   onJobFailed(handler: (event: BrewJobFailedEvent) => void): () => void {
     return this.bridge.api.onJobFailed(handler);
-  }
-
-  onUpdateAvailable(handler: (event: AppUpdateAvailableEvent) => void): () => void {
-    return this.bridge.api.onUpdateAvailable(handler);
   }
 
   onUpdateStateChanged(handler: (state: AppUpdateState) => void): () => void {

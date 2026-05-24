@@ -159,7 +159,6 @@
                 <z-badge zType="default" zShape="pill">Update available</z-badge>
               }
             </div>
-            <p class="text-sm">Brewdeck {{ appUpdateStore.currentVersion() }}</p>
             @if (appUpdateStore.hintText()) {
               <p
                 class="text-xs"
@@ -181,11 +180,6 @@
                   (click)="appUpdateStore.checkForUpdates()"
                 >
                   {{ appUpdateStore.checking() ? 'Checking…' : 'Check for updates' }}
-                </button>
-              }
-              @if (appUpdateStore.canRestart()) {
-                <button type="button" z-button zSize="sm" (click)="appUpdateStore.quitAndInstall()">
-                  Restart to update
                 </button>
               }
             </div>

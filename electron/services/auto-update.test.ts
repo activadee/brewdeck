@@ -43,12 +43,11 @@ describe('auto-update service', () => {
     return import('./auto-update');
   }
 
-  it('maps updater events to state and emits update-available on download complete', async () => {
+  it('maps updater events to state', async () => {
     const onStateChanged = vi.fn();
-    const onUpdateAvailable = vi.fn();
     const { configureAutoUpdate, getUpdateState, checkForAppUpdate } = await loadModule();
 
-    configureAutoUpdate({ onStateChanged, onUpdateAvailable });
+    configureAutoUpdate({ onStateChanged });
     expect(getUpdateState().status).toBe('checking');
 
     updaterListeners.get('update-available')?.({
@@ -66,10 +65,6 @@ describe('auto-update service', () => {
       releaseNotes: null
     });
     expect(getUpdateState().status).toBe('ready');
-    expect(onUpdateAvailable).toHaveBeenCalledWith({
-      version: '2.0.0',
-      releaseNotes: null
-    });
 
     updaterListeners.get('update-not-available')?.();
     expect(getUpdateState().status).toBe('upToDate');
@@ -87,12 +82,27 @@ describe('auto-update service', () => {
     expect(onStateChanged).toHaveBeenCalled();
   });
 
-  it('quits and installs only when enabled', async () => {
-    const { configureAutoUpdate, quitAndInstallUpdate } = await loadModule();
+  it('quits and installs only when update is ready', async () => {
+    const { configureAutoUpdate, quitAndInstallUpdate, getUpdateState } = await loadModule();
 
     configureAutoUpdate();
     await quitAndInstallUpdate();
-    expect(autoUpdater.quitAndInstall).toHaveBeenCalled();
+    expect(autoUpdater.quitAndInstall).not.toHaveBeenCalled();
+
+    updaterListeners.get('update-downloaded')?.({ version: '2.0.0', releaseNotes: null });
+    expect(getUpdateState().status).toBe('ready');
+
+    await quitAndInstallUpdate();
+    expect(autoUpdater.quitAndInstall).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not stack updater listeners when configured twice', async () => {
+    const { configureAutoUpdate } = await loadModule();
+
+    configureAutoUpdate();
+    configureAutoUpdate();
+
+    expect(autoUpdater.on).toHaveBeenCalledTimes(4);
   });
 
   it('starts disabled when the app is not packaged', async () => {

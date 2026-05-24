@@ -73,7 +73,6 @@ export class SettingsViewComponent {
   });
 
   constructor() {
-    void this.appUpdateStore.initialize();
     void this.templatesStore.load();
     effect(() => {
       const settings = this.settingsStore.settings();

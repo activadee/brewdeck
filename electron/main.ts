@@ -480,9 +480,6 @@ async function bootstrap(): Promise<void> {
   configureAutoUpdate({
     onStateChanged: (state) => {
       emitRendererEvent(IPC_CHANNELS.EVENTS_UPDATE_STATE_CHANGED, state);
-    },
-    onUpdateAvailable: (event) => {
-      emitRendererEvent(IPC_CHANNELS.EVENTS_UPDATE_AVAILABLE, event);
     }
   });
   backgroundScheduler.start(settings);

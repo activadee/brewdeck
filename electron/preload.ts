@@ -4,7 +4,6 @@ import {
   actionTemplateSchema,
   appSettingsSchema,
   appSettingsUpdateSchema,
-  appUpdateAvailableEventSchema,
   appUpdateStateSchema,
   batchJobResultSchema,
   batchManyRequestSchema,
@@ -65,14 +64,6 @@ const api: BrewGuiBridge = {
   async getWindowChromeState() {
     const payload = await ipcRenderer.invoke(IPC_CHANNELS.APP_GET_WINDOW_CHROME);
     return windowChromeStateSchema.parse(payload);
-  },
-
-  async getAppVersion() {
-    const payload = await ipcRenderer.invoke(IPC_CHANNELS.APP_GET_VERSION);
-    if (typeof payload !== 'string') {
-      throw new Error('Invalid app version payload');
-    }
-    return payload;
   },
 
   async getUpdateState() {
@@ -348,15 +339,6 @@ const api: BrewGuiBridge = {
 
     ipcRenderer.on(IPC_CHANNELS.EVENTS_JOB_FAILED, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.EVENTS_JOB_FAILED, listener);
-  },
-
-  onUpdateAvailable(handler) {
-    const listener = (_event: unknown, payload: unknown) => {
-      handler(appUpdateAvailableEventSchema.parse(payload));
-    };
-
-    ipcRenderer.on(IPC_CHANNELS.EVENTS_UPDATE_AVAILABLE, listener);
-    return () => ipcRenderer.removeListener(IPC_CHANNELS.EVENTS_UPDATE_AVAILABLE, listener);
   },
 
   onUpdateStateChanged(handler) {

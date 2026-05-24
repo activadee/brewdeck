@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import { autoUpdater } from 'electron-updater';
 
-import type { AppUpdateAvailableEvent, AppUpdateState } from '../../src/shared/contracts';
+import type { AppUpdateState } from '../../src/shared/contracts';
 import { log } from '../utils/logger';
 
 declare const __ENABLE_AUTO_UPDATES__: boolean;
@@ -10,16 +10,15 @@ type UpdateStateEmitter = (state: AppUpdateState) => void;
 
 interface ConfigureAutoUpdateOptions {
   onStateChanged?: UpdateStateEmitter;
-  onUpdateAvailable?: (event: AppUpdateAvailableEvent) => void;
 }
 
 let currentState: AppUpdateState = createInitialState();
 let stateEmitter: UpdateStateEmitter | null = null;
-let onUpdateAvailableCallback: ((event: AppUpdateAvailableEvent) => void) | null = null;
+let configured = false;
 
 function createInitialState(): AppUpdateState {
   return {
-    status: isAutoUpdateEnabled() ? 'idle' : 'disabled',
+    status: isAutoUpdateEnabled() ? 'upToDate' : 'disabled',
     currentVersion: app.getVersion()
   };
 }
@@ -37,10 +36,6 @@ export function isAutoUpdateEnabled(): boolean {
   return app.isPackaged && __ENABLE_AUTO_UPDATES__;
 }
 
-export function getAppVersion(): string {
-  return app.getVersion();
-}
-
 export function getUpdateState(): AppUpdateState {
   return currentState;
 }
@@ -55,7 +50,7 @@ export async function checkForAppUpdate(): Promise<void> {
 }
 
 export async function quitAndInstallUpdate(): Promise<void> {
-  if (!isAutoUpdateEnabled()) {
+  if (!isAutoUpdateEnabled() || currentState.status !== 'ready') {
     return;
   }
 
@@ -64,14 +59,20 @@ export async function quitAndInstallUpdate(): Promise<void> {
 
 export function configureAutoUpdate(options: ConfigureAutoUpdateOptions = {}): void {
   stateEmitter = options.onStateChanged ?? null;
-  onUpdateAvailableCallback = options.onUpdateAvailable ?? null;
   currentState = createInitialState();
   stateEmitter?.(currentState);
 
   if (!isAutoUpdateEnabled()) {
-    log.info('Auto-updater is disabled (packaged builds with ENABLE_AUTO_UPDATES=1 at build time enable it).');
+    log.info(
+      'Auto-updater is disabled (unpackaged dev builds, or ENABLE_AUTO_UPDATES=0 at build time).'
+    );
     return;
   }
+
+  if (configured) {
+    return;
+  }
+  configured = true;
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
@@ -111,10 +112,6 @@ export function configureAutoUpdate(options: ConfigureAutoUpdateOptions = {}): v
       availableVersion: info.version,
       releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : null,
       error: undefined
-    });
-    onUpdateAvailableCallback?.({
-      version: info.version,
-      releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : null
     });
   });
 

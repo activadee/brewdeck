@@ -1,5 +1,7 @@
 import { defineConfig } from 'tsup';
 
+import { compileTimeAutoUpdatesEnabled } from './electron/build-flags';
+
 export default defineConfig({
   entry: {
     main: 'electron/main.ts',
@@ -15,6 +17,9 @@ export default defineConfig({
   dts: false,
   external: ['electron'],
   define: {
-    __ENABLE_AUTO_UPDATES__: JSON.stringify(process.env.ENABLE_AUTO_UPDATES === '1')
+    // Enabled for packaged apps by default; set ENABLE_AUTO_UPDATES=0 to opt out at build time.
+    __ENABLE_AUTO_UPDATES__: JSON.stringify(
+      compileTimeAutoUpdatesEnabled(process.env)
+    )
   }
 });

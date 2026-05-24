@@ -20,12 +20,13 @@ export const AppUpdateStore = signalStore(
   withComputed((store) => ({
     currentVersion: computed(() => store.state()?.currentVersion ?? ''),
     checking: computed(() => store.state()?.status === 'checking'),
+    isDownloading: computed(() => store.state()?.status === 'downloading'),
     canRestart: computed(() => store.state()?.status === 'ready'),
     canCheck: computed(() => store.state()?.status !== 'disabled'),
-    showUpdateBadge: computed(() => {
-      const status = store.state()?.status;
-      return status === 'ready' || status === 'downloading';
-    }),
+    showUpdateBadge: computed(() => store.state()?.status === 'ready'),
+    sidebarFooterLabel: computed(() =>
+      store.state()?.status === 'downloading' ? 'Downloading…' : ''
+    ),
     hintText: computed(() => {
       const updateState = store.state();
       if (!updateState) {
@@ -67,13 +68,10 @@ export const AppUpdateStore = signalStore(
           return;
         }
 
-        const [version, updateState] = await Promise.all([
-          facade.getAppVersion(),
-          facade.getUpdateState()
-        ]);
+        const updateState = await facade.getUpdateState();
 
         patchState(store, {
-          state: { ...updateState, currentVersion: updateState.currentVersion || version },
+          state: updateState,
           initialized: true
         });
 

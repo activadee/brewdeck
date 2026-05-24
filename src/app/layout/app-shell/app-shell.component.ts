@@ -4,6 +4,7 @@ import {
   DestroyRef,
   HostListener,
   computed,
+  effect,
   inject,
   signal
 } from '@angular/core';
@@ -110,6 +111,8 @@ export class AppShellComponent {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
 
+  private lastAppUpdateStatus: string | null = null;
+
   protected readonly paletteOpen = signal(false);
   protected readonly paletteMode = signal<CommandPaletteMode>('root');
   protected readonly pendingPackageAction = signal<PendingPackageAction | null>(null);
@@ -206,6 +209,7 @@ export class AppShellComponent {
     void this.refreshWindowChromeState();
     this.registerRouterTracking();
     this.registerEventBridges();
+    this.registerAppUpdateReadyToast();
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -574,22 +578,39 @@ export class AppShellComponent {
         if (event.action !== 'syncMetadata') {
           this.toast.push(`Homebrew command failed: ${event.error}`, 'error', 6_000);
         }
-      }),
-      this.facade.onUpdateAvailable((event) => {
-        this.toast.pushWithAction(
-          `Brewdeck ${event.version} is ready to install.`,
-          'info',
-          {
-            label: 'Restart to update',
-            run: () => this.facade.quitAndInstallUpdate()
-          },
-          30_000
-        );
       })
     ];
 
     this.destroyRef.onDestroy(() => {
       unsubscribers.forEach((unsubscribe) => unsubscribe());
+    });
+  }
+
+  private registerAppUpdateReadyToast(): void {
+    effect(() => {
+      const updateState = this.appUpdateStore.state();
+      if (!updateState) {
+        return;
+      }
+
+      const status = updateState.status;
+      const previous = this.lastAppUpdateStatus;
+      this.lastAppUpdateStatus = status;
+
+      if (status !== 'ready' || previous !== 'downloading') {
+        return;
+      }
+
+      const version = updateState.availableVersion ?? updateState.currentVersion;
+      this.toast.pushWithAction(
+        `Brewdeck ${version} is ready to install.`,
+        'info',
+        {
+          label: 'Restart to update',
+          run: () => this.facade.quitAndInstallUpdate()
+        },
+        30_000
+      );
     });
   }
 
