@@ -1,7 +1,7 @@
 name: Release
 
 concurrency:
-  group: release-${{ github.event.inputs.ref_tag || github.ref_name }}
+  group: release-${{ github.event.inputs.ref_tag || github.event.inputs.release_type || github.ref_name }}
   cancel-in-progress: false
 
 on:
@@ -10,18 +10,92 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        default: build-only
+        type: choice
+        options:
+          - build-only
+          - stable
+      version:
+        description: 'Stable version X.Y.Z (optional; defaults from package.json on main)'
+        required: false
+        type: string
       ref_tag:
-        description: 'Release tag to build (e.g. v0.5.3-beta.1). Used when tag push does not trigger workflows.'
+        description: 'Internal: tag to build (set by Bump and Tag)'
         required: false
         type: string
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
+  prepare_stable:
+    name: Tag stable release
+    if: github.event_name == 'workflow_dispatch' && inputs.release_type == 'stable'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+      sha: ${{ steps.resolve_sha.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Resolve stable version
+        id: meta
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ -n "$INPUT_VERSION" ]]; then
+            version="${INPUT_VERSION#v}"
+            if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Invalid stable version: $INPUT_VERSION" >&2
+              exit 1
+            fi
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          else
+            npx tsx scripts/resolve-stable-release.ts --github-output
+          fi
+
+      - id: resolve_sha
+        name: Resolve commit SHA
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push stable tag
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists; reusing it for this release run."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG" HEAD
+          git push origin "$TAG"
+
   preflight:
     name: Preflight
-    if: startsWith(github.ref, 'refs/tags/') || inputs.ref_tag != ''
+    needs: [prepare_stable]
+    if: |
+      always() &&
+      needs.prepare_stable.result != 'failure' &&
+      (
+        startsWith(github.ref, 'refs/tags/') ||
+        inputs.ref_tag != '' ||
+        needs.prepare_stable.result == 'success'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -49,6 +123,9 @@ jobs:
           if [[ -n "${{ inputs.ref_tag }}" ]]; then
             tag="${{ inputs.ref_tag }}"
             sha="$(git rev-list -n 1 "$tag")"
+          elif [[ "${{ needs.prepare_stable.result }}" == "success" ]]; then
+            tag="${{ needs.prepare_stable.outputs.tag }}"
+            sha="${{ needs.prepare_stable.outputs.sha }}"
           else
             tag="${GITHUB_REF_NAME}"
             sha="${GITHUB_SHA}"
@@ -91,8 +168,11 @@ jobs:
 
   build:
     name: Build macOS
-    needs: preflight
-    if: startsWith(github.ref, 'refs/tags/') || inputs.ref_tag != ''
+    needs: [prepare_stable, preflight]
+    if: |
+      always() &&
+      needs.prepare_stable.result != 'failure' &&
+      needs.preflight.result == 'success'
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
@@ -134,8 +214,12 @@ jobs:
 
   publish:
     name: Publish GitHub Release
-    needs: [preflight, build]
-    if: startsWith(github.ref, 'refs/tags/') || inputs.ref_tag != ''
+    needs: [prepare_stable, preflight, build]
+    if: |
+      always() &&
+      needs.prepare_stable.result != 'failure' &&
+      needs.preflight.result == 'success' &&
+      needs.build.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -179,10 +263,11 @@ jobs:
           fail_on_unmatched_files: true
 
   finalize:
-    name: Finalize version on branch
-    needs: [preflight, publish]
+    name: Finalize version on main
+    needs: [prepare_stable, preflight, publish]
     if: |
-      (startsWith(github.ref, 'refs/tags/') || inputs.ref_tag != '') &&
+      always() &&
+      needs.prepare_stable.result != 'failure' &&
       needs.preflight.result == 'success' &&
       needs.publish.result == 'success'
     runs-on: ubuntu-latest
@@ -203,21 +288,8 @@ jobs:
           RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
         run: npx tsx scripts/update-release-package-version.ts "$RELEASE_VERSION" --github-output
 
-      - name: Commit and push to development
-        if: |
-          steps.update_versions.outputs.changed == 'true' &&
-          needs.preflight.outputs.is_prerelease == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json
-          git commit -m "chore(release): prepare ${{ needs.preflight.outputs.tag }}"
-          git push origin HEAD:development
-
       - name: Commit and push to main
-        if: |
-          steps.update_versions.outputs.changed == 'true' &&
-          needs.preflight.outputs.is_prerelease == 'false'
+        if: steps.update_versions.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -225,29 +297,9 @@ jobs:
           git commit -m "chore(release): prepare ${{ needs.preflight.outputs.tag }}"
           git push origin HEAD:main
 
-      - name: Sync development for next pre-release line
-        if: needs.preflight.outputs.is_prerelease == 'false'
-        run: |
-          git fetch origin development main
-          git checkout development
-          NEXT_BASE=$(node -e "
-            const v = '${{ needs.preflight.outputs.version }}'.replace(/[-+].*$/, '').split('.').map(Number);
-            console.log([v[0], v[1], v[2] + 1].join('.'));
-          ")
-          npx tsx scripts/update-release-package-version.ts "$NEXT_BASE"
-          if git diff --quiet -- package.json; then
-            echo "development already aligned."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json
-          git commit -m "chore(release): prepare next development line after ${{ needs.preflight.outputs.tag }}"
-          git push origin HEAD:development
-
   manual-build:
     name: Manual unsigned build
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.release_type == 'build-only'
     runs-on: macos-latest
     timeout-minutes: 45
     steps:

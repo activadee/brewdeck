@@ -1,46 +1,46 @@
 # Contributing
 
-## Branching and merges
+## Branching
 
-Brewdeck uses a two-branch git flow:
-
-| Branch | Role | Incoming merges |
-|--------|------|-----------------|
-| `development` | Default branch; integration and pre-releases | Feature branches via **squash** PR |
-| `main` | Production-ready history and stable releases | `development` only via **rebase** PR (not squash) |
+All work targets **`main`** (default branch).
 
 ```text
-feature/* --[squash PR]--> development --[rebase PR]--> main
+feature/* --[PR]--> main
 ```
 
-### Merge methods (required)
+Use squash or merge commits as your team prefers; CI runs on every pull request to `main`.
 
-Configure GitHub branch rules when possible:
+## Releases
 
-- **`development`**: allow **squash** only for feature PRs.
-- **`main`**: allow **rebase** only for promotion PRs from `development`.
+Do **not** push version tags manually for normal pre-releases.
 
-Repo settings should have squash and rebase enabled; merge commits disabled.
+| Action | Result |
+|--------|--------|
+| Merge PR into `main` | Next `vX.Y.Z-beta.N` **pre-release** (unsigned macOS DMG/ZIP + `latest-mac.yml`) |
+| **Release** workflow → `stable` (manual) | Stable `vX.Y.Z` marked **Latest** on GitHub |
 
-## Releases (automated)
+### Pre-releases (automatic)
 
-Do **not** push version tags manually. CI creates tags and GitHub Releases.
+After each push to `main` (except `chore(release):` bot commits), **Bump and Tag** creates the next beta tag and runs the **Release** workflow.
 
-| Event | Result |
-|-------|--------|
-| Push to `development` (after a squash merge) | Next `vX.Y.Z-beta.N` pre-release (unsigned macOS DMG/ZIP) |
-| Push to `main` (after rebase-merge from `development`) | Stable `vX.Y.Z` release marked **Latest** |
+### Stable release (manual)
 
-Packaged apps auto-update from **stable** releases only (`v*.*.*` without a prerelease suffix). Pre-releases are for manual testing.
+When you are ready to ship to users (and auto-update):
 
-### Typical workflow
+1. Open **Actions** → **Release** → **Run workflow**.
+2. Set **Release type** to `stable`.
+3. Optionally set **Stable version** (e.g. `0.6.1`). If omitted, the version is taken from `package.json` on `main` (prerelease suffix is stripped).
+4. Run on `main`.
 
-1. Open a PR into `development` from your feature branch.
-2. Squash-merge when CI passes → pre-release is published automatically.
-3. When ready to ship, open a PR from `development` into `main`.
-4. Rebase-merge when CI passes → stable release is published automatically.
+The workflow tags `main`, builds, publishes a non-prerelease GitHub Release, and commits the aligned `package.json` version back to `main`.
 
-`chore(release):` commits from GitHub Actions are ignored by the tag workflow to avoid loops.
+### Unsigned build only
+
+**Release** workflow → **Release type** `build-only` uploads artifacts to the workflow run without creating a GitHub Release.
+
+## Auto-update
+
+Packaged apps only pick up **stable** releases (`vX.Y.Z` without `-beta`). Pre-releases are for manual testing.
 
 ## Local development
 
@@ -48,4 +48,4 @@ See [README.md](README.md) for install, `npm run dev`, and tests.
 
 ## CI
 
-Pull requests targeting `development` or `main` run the **CI** workflow (`test:all` + production build).
+Pull requests to `main` run **CI** (`test:all` + production build).
