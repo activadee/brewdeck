@@ -262,41 +262,6 @@ jobs:
             release-assets/*.yml
           fail_on_unmatched_files: true
 
-  finalize:
-    name: Finalize version on main
-    needs: [prepare_stable, preflight, publish]
-    if: |
-      always() &&
-      needs.prepare_stable.result != 'failure' &&
-      needs.preflight.result == 'success' &&
-      needs.publish.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.preflight.outputs.ref }}
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Update package version
-        id: update_versions
-        env:
-          RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
-        run: npx tsx scripts/update-release-package-version.ts "$RELEASE_VERSION" --github-output
-
-      - name: Commit and push to main
-        if: steps.update_versions.outputs.changed == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json
-          git commit -m "chore(release): prepare ${{ needs.preflight.outputs.tag }}"
-          git push origin HEAD:main
-
   # Human "build-only" only — Bump and Tag also dispatches with release_type=build-only but sets ref_tag.
   manual-build:
     name: Manual unsigned build

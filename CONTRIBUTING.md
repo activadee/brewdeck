@@ -32,7 +32,9 @@ When you are ready to ship to users (and auto-update):
 3. Optionally set **Stable version** (e.g. `0.6.1`). If omitted, the version is taken from `package.json` on `main` (prerelease suffix is stripped).
 4. Run on `main`.
 
-The workflow tags `main`, builds, publishes a non-prerelease GitHub Release, and commits the aligned `package.json` version back to `main`.
+The workflow tags `main`, builds, and publishes a non-prerelease GitHub Release.
+
+`package.json` on `main` is aligned only for the build (at the release tag). It is **not** committed back to `main` automatically, because branch protection (PR + required checks) blocks direct bot pushes. Update `package.json` in a normal PR if you want it to match the shipped version, or allow `github-actions[bot]` to bypass rules for release commits in [repository rules](https://github.com/activadee/brewdeck/rules).
 
 ### Unsigned build only
 
