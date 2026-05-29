@@ -1,37 +1,82 @@
 import { Routes } from '@angular/router';
 
-import { BrowseCatalogViewComponent } from './features/browse/browse-catalog-view/browse-catalog-view.component';
-import { InstalledPackagesViewComponent } from './features/installed/installed-packages-view/installed-packages-view.component';
-import { SettingsViewComponent } from './features/settings/settings-view/settings-view.component';
-import { ServicesViewComponent } from './features/services/services-view/services-view.component';
-import { TapsViewComponent } from './features/taps/taps-view/taps-view.component';
-import { TrayPopoverComponent } from './features/tray/tray-popover/tray-popover.component';
-import { UpdatesViewComponent } from './features/updates/updates-view/updates-view.component';
 import { AppShellComponent } from './layout/app-shell/app-shell.component';
-import { CleanupViewComponent } from './features/cleanup/cleanup-view/cleanup-view.component';
-import { DoctorViewComponent } from './features/doctor/doctor-view/doctor-view.component';
-import { HistoryViewComponent } from './features/history/history-view/history-view.component';
 
 export const routes: Routes = [
   {
     path: 'tray',
-    component: TrayPopoverComponent
+    loadComponent: () =>
+      import('./features/tray/tray-popover/tray-popover.component').then(
+        (m) => m.TrayPopoverComponent,
+      ),
   },
   {
     path: '',
     component: AppShellComponent,
     children: [
-      { path: 'updates', component: UpdatesViewComponent },
-      { path: 'installed', component: InstalledPackagesViewComponent },
-      { path: 'browse', component: BrowseCatalogViewComponent },
-      { path: 'taps', component: TapsViewComponent },
-      { path: 'cleanup', component: CleanupViewComponent },
-      { path: 'doctor', component: DoctorViewComponent },
-      { path: 'history', component: HistoryViewComponent },
-      { path: 'services', component: ServicesViewComponent },
-      { path: 'settings', component: SettingsViewComponent },
-      { path: '', pathMatch: 'full', redirectTo: 'updates' }
-    ]
+      {
+        path: 'updates',
+        loadComponent: () =>
+          import('./features/updates/updates-view/updates-view.component').then(
+            (m) => m.UpdatesViewComponent,
+          ),
+      },
+      {
+        path: 'installed',
+        loadComponent: () =>
+          import('./features/installed/installed-packages-view/installed-packages-view.component').then(
+            (m) => m.InstalledPackagesViewComponent,
+          ),
+      },
+      {
+        path: 'browse',
+        loadComponent: () =>
+          import('./features/browse/browse-catalog-view/browse-catalog-view.component').then(
+            (m) => m.BrowseCatalogViewComponent,
+          ),
+      },
+      {
+        path: 'taps',
+        loadComponent: () =>
+          import('./features/taps/taps-view/taps-view.component').then((m) => m.TapsViewComponent),
+      },
+      {
+        path: 'cleanup',
+        loadComponent: () =>
+          import('./features/cleanup/cleanup-view/cleanup-view.component').then(
+            (m) => m.CleanupViewComponent,
+          ),
+      },
+      {
+        path: 'doctor',
+        loadComponent: () =>
+          import('./features/doctor/doctor-view/doctor-view.component').then(
+            (m) => m.DoctorViewComponent,
+          ),
+      },
+      {
+        path: 'history',
+        loadComponent: () =>
+          import('./features/history/history-view/history-view.component').then(
+            (m) => m.HistoryViewComponent,
+          ),
+      },
+      {
+        path: 'services',
+        loadComponent: () =>
+          import('./features/services/services-view/services-view.component').then(
+            (m) => m.ServicesViewComponent,
+          ),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/settings/settings-view/settings-view.component').then(
+            (m) => m.SettingsViewComponent,
+          ),
+      },
+      { path: '', pathMatch: 'full', redirectTo: 'updates' },
+    ],
   },
-  { path: '**', redirectTo: '' }
+  { path: '**', redirectTo: '' },
 ];
