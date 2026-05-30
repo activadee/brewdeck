@@ -1,118 +1,152 @@
-# Brewdeck
+<div align="center">
+  <img src="public/icons/tray-icon.svg" alt="Brewdeck" width="128" height="128" />
 
-Minimalistic macOS Electron wrapper around Homebrew with Angular 21, Tailwind CSS 4, and Signal Stores.
+  # Brewdeck
 
-> **Upgrading from Brew Sidebar:** The macOS bundle ID changed from `com.brewsidebar.app` to `com.brewdeck.app`. Remove the old **Brew Sidebar** app from Applications before installing Brewdeck to avoid duplicate menu bar entries and conflicting auto-update state.
+  **A beautiful macOS menu bar app for Homebrew**
 
-## Features
+  [![CI](https://github.com/activadee/brewdeck/actions/workflows/ci.yml/badge.svg)](https://github.com/activadee/brewdeck/actions/workflows/ci.yml)
+  [![Release](https://github.com/activadee/brewdeck/actions/workflows/release.yml/badge.svg)](https://github.com/activadee/brewdeck/actions/workflows/release.yml)
+  [![Angular](https://img.shields.io/badge/Angular-21.1-%23DD0031)](https://angular.dev/)
+  [![Electron](https://img.shields.io/badge/Electron-42-%2347848F)](https://www.electronjs.org/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-%2306B6D4)](https://tailwindcss.com/)
+  [![macOS](https://img.shields.io/badge/macOS-11%2B-%23000000)](https://support.apple.com/macos)
+  [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-- Installed package inventory for formulae and casks
-- Outdated package detection with upgrade actions (`upgrade one`, `upgrade all`, smart upgrade)
-- Update channels (critical, security, normal)
-- Catalog browsing backed by Homebrew API + local cache fallback
-- Action templates, job history, and batch multi-select actions
-- Tray popover with update count, interval settings, and quick actions
-- Typed, validated IPC boundary between renderer and Electron main process
+  <br />
 
-## Stack
+  **Brewdeck brings the power of Homebrew to your macOS menu bar.**  
+  Browse, install, manage, and update your formulae and casks — all without touching a terminal.
 
-- Angular `21.1.5` (standalone + control flow + hash routing)
-- `@ngrx/signals` signal stores
-- Tailwind CSS `4.2.1`
-- Electron `40.6.1`
-- electron-builder `26.8.1`
+  <br />
+</div>
 
-## Development
+---
+
+## ✨ Features
+
+| | Feature | Description |
+|---|---|---|
+| 📦 | **Package Inventory** | Browse all your installed formulae and casks with search, filter, and sort |
+| 🔄 | **Smart Upgrades** | Upgrade single packages, batch-select multiple, or use the smart upgrade planner that groups updates by criticality |
+| 🔔 | **Update Channels** | Updates classified as **critical**, **security**, or **normal** — see at a glance what needs attention |
+| 🔍 | **Catalog Browser** | Search the full Homebrew catalog with local cache fallback for offline use |
+| ⚡ | **Tray Popover** | Quick glance at pending updates, check intervals, and one-click check from the menu bar |
+| 📋 | **Action Templates** | Save and replay common multi-package operations — install your dev toolkit with one click |
+| 📜 | **Job History** | Track every install, upgrade, and uninstall with timestamps, stats, and recovery |
+| 🛠️ | **Services Manager** | Start, stop, and restart Homebrew services from a clean UI |
+| 🔧 | **Taps Manager** | Add, remove, and browse taps without terminal commands |
+| 🩺 | **Doctor & Cleanup** | Run `brew doctor` and `brew cleanup` with previews and confirmation |
+| ⌨️ | **Command Palette** | Quick actions and navigation with keyboard shortcuts |
+| 📦 | **Batch Operations** | Multi-select packages for batch install, upgrade, uninstall, and pin |
+
+## 🖼️ Screenshots
+
+> *Coming soon — screenshots of the tray popover, installed packages view, catalog browser, and more.*
+
+---
+
+## 🚀 Installation
+
+### Download
+
+Grab the latest DMG or ZIP from the [Releases page](https://github.com/activadee/brewdeck/releases).
+
+> **Note:** Builds are unsigned. macOS Gatekeeper may block first launch.  
+> **Workaround:** Right-click → **Open** from Finder, or allow in **System Settings → Privacy & Security**.
+
+### Or build from source
+
+```bash
+git clone https://github.com/activadee/brewdeck.git
+cd brewdeck
+npm install
+npm run dev          # Development mode with hot reload
+npm run build        # Production build
+npm run package:mac  # Package as .dmg / .zip
+```
+
+---
+
+## 🧱 Stack
+
+| Layer | Technology |
+|---|---|
+| **Desktop Shell** | [Electron 42](https://www.electronjs.org/) |
+| **UI Framework** | [Angular 21.1](https://angular.dev/) (standalone, control flow) |
+| **State Management** | [@ngrx/signals](https://ngrx.io/guide/signals) signal stores |
+| **Styling** | [Tailwind CSS 4](https://tailwindcss.com/) + [CVA](https://cva.style/) + `tailwind-merge` |
+| **Component Library** | Custom shadcn/ui-style library (50+ components) |
+| **Icons** | [Lucide](https://lucide.dev/) |
+| **Carousel** | [Embla](https://www.embla-carousel.com/) |
+| **IPC** | Typed, validated contracts with Zod |
+| **Packaging** | [electron-builder](https://www.electron.build/) + `electron-updater` |
+| **CI/CD** | GitHub Actions — automated beta/stable releases |
+
+---
+
+## 🛠️ Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-This starts:
+This concurrently starts:
 
-1. Angular dev server on `http://127.0.0.1:4200`
-2. Electron TypeScript build watcher (`tsup`)
-3. Electron desktop app
+1. **Angular dev server** on `http://127.0.0.1:4200`
+2. **Electron TypeScript watcher** (tsup)
+3. **Electron app** window pointing at the dev server
 
-## Test
+### Available scripts
 
-```bash
-npm run test        # Angular unit tests
-npm run test:node   # Electron/node tests (vitest)
-npm run test:all
-```
+| Command | Description |
+|---|---|
+| `npm run dev` | Start dev server + Electron with hot reload |
+| `npm run build` | Production build (Angular + Electron) |
+| `npm test` | Run Angular unit tests |
+| `npm run test:node` | Run Node/Electron unit tests (vitest) |
+| `npm run test:all` | Run all tests |
+| `npm run package:mac` | Package signed/unsigned macOS app |
 
-## Production Build
+---
 
-```bash
-npm run build
-npm run package:mac
-```
+## 📦 Release Workflow
 
-Outputs are generated in `release/`.
+Brewdeck uses an automated CI release pipeline. See [CONTRIBUTING.md](CONTRIBUTING.md) for full details.
 
-## GitHub Release (unsigned)
+| Trigger | Release Type |
+|---|---|
+| **Schedule** (every 6h) or workflow_dispatch `beta` | Pre-release `vX.Y.Z-beta.N` |
+| Push tag `vX.Y.Z` or workflow_dispatch `stable` | **Latest** release (unsigned) |
+| workflow_dispatch `build-only` | CI build without GitHub Release |
 
-Releases are automated from `main` — see [CONTRIBUTING.md](CONTRIBUTING.md).
+In-app auto-updates are enabled by default on packaged builds (`ENABLE_AUTO_UPDATES=1`).  
+The app checks GitHub Releases for new tags and notifies you when an update is ready.
 
-| Trigger | Release |
-|---------|---------|
-| Schedule or **Release** → `beta` | Pre-release `vX.Y.Z-beta.N` |
-| Push tag `vX.Y.Z` or **Release** → `stable` | Stable **Latest** (unsigned DMG + ZIP + `latest-mac.yml`) |
+---
 
-Merges to `main` alone do not publish. Use **Release** → `build-only` for a local CI build without a GitHub Release.
+## 🤝 Contributing
 
-The CI job sets `CSC_IDENTITY_AUTO_DISCOVERY=false`, so builds are **unsigned**. macOS Gatekeeper may block first launch (and sometimes updated installs) until the user uses **Right-click → Open** or allows the app in **System Settings → Privacy & Security**.
+Contributions are welcome! Check out [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
-### In-app auto-update (unsigned)
+- Local development setup
+- Coding conventions
+- PR guidelines
+- Release process
 
-Packaged builds enable in-app updates by default (`ENABLE_AUTO_UPDATES` is on unless set to `0` at build time). They check [GitHub Releases](https://github.com/activadee/brewdeck/releases) via `electron-updater` (GitHub provider in `package.json`). When a newer tag is published, the app downloads the ZIP in the background and shows **Restart to update** in a toast.
+---
 
-Limitations without code signing / notarization:
+## 🧪 IPC Contract
 
-- Updates still rely on tagged releases (`v*`); local `package:mac` builds do not publish release metadata to GitHub.
-- macOS may quarantine downloaded updates the same way as a fresh DMG install.
-- Auto-update uses the **ZIP** artifact, not the DMG.
+Brewdeck uses a fully typed, Zod-validated IPC boundary between the renderer and main process.  
+All channels and contracts are documented in:
 
-### Signing (optional, for stricter Gatekeeper)
+- `src/shared/contracts.ts` — request/response types
+- `electron/ipc-channels.ts` — channel name constants
 
-Documented environment variables for signed/notarized macOS release:
+---
 
-- `CSC_LINK` — code signing certificate
-- `CSC_KEY_PASSWORD` — certificate password
-- `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` — notarization
+## 📄 License
 
-## IPC contract
-
-Main channels (request-response):
-
-- `app:openMain`, `app:windowControl`, `app:getWindowChrome`, `app:quitAndInstallUpdate`
-- `brew:getAvailability`, `brew:getInstalled`, `brew:getOutdated`
-- `brew:getTaps`, `brew:getServices`, `brew:getPackageDetails`
-- `brew:searchCatalog`
-- `brew:installOne`, `brew:reinstallOne`, `brew:uninstallOne`
-- `brew:pinOne`, `brew:unpinOne`
-- `brew:upgradeOne`, `brew:upgradeAll`, `brew:getSmartUpgradePlan`, `brew:upgradeSmart`
-- `brew:upgradeMany`, `brew:uninstallMany`, `brew:pinMany`
-- `brew:getUninstallImpact`
-- `brew:tapAdd`, `brew:tapRemove`
-- `brew:serviceStart`, `brew:serviceStop`, `brew:serviceRestart`
-- `brew:cleanupPreview`, `brew:cleanupRun`, `brew:doctorRun`
-- `brew:checkNow`, `brew:syncMetadata`
-- `templates:list`, `templates:save`, `templates:delete`, `templates:run`
-- `history:list`, `history:stats`
-- `jobs:recover`
-- `settings:get`, `settings:update`
-
-Event channels:
-
-- `updates:changed`
-- `app:windowChromeChanged`
-- `brew:job-progress`, `brew:job-complete`, `brew:job-failed`
-- `app:updateAvailable` (packaged builds with auto-update enabled)
-
-All contracts are defined in:
-
-- `src/shared/contracts.ts`
-- Channel names in `electron/ipc-channels.ts`
+MIT © [activadee](https://github.com/activadee)
